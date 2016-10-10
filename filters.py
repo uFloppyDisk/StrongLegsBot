@@ -5,12 +5,12 @@ import unpackconfig
 
 
 class filters:
-    def __init__(self, irc, sqlconn, info):
+    def __init__(self, irc, sqlconn, info, userlevel=0):
         self.cfg = unpackconfig.configUnpacker().unpackcfg()
         self.irc = irc
         self.sqlconn = sqlconn
         self.sqlConnectionChannel, self.sqlCursorChannel = self.sqlconn
-        self.msg = info
+        self.info = info
 
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS filters'
                                       '(filtertype TEXT, enabled TEXT, maxuserlevel INTEGER, first_timeout INTEGER, '
@@ -64,14 +64,14 @@ class filters:
                         #     logging.error(err)
 
         self.sqlCursorChannel.execute('SELECT * FROM offenses WHERE userid == ?',
-                                      (self.msg["user-id"],))
+                                      (self.info["user-id"],))
         self.sqlCursorOffload = self.sqlCursorChannel.fetchone()
 
         if self.sqlCursorOffload is not None:
             self.UserOffenseCount = int(self.sqlCursorOffload[2])
         else:
             self.sqlCursorChannel.execute('INSERT INTO offenses (userid, username, offenses) VALUES (?, ?, ?)',
-                                          (self.msg["user-id"], self.msg["username"], 0))
+                                          (self.info["user-id"], self.info["username"], 0))
             self.sqlConnectionChannel.commit()
             self.UserOffenseCount = 0
 
@@ -95,31 +95,31 @@ class filters:
             ban_after_third = False
 
         if enabled:
-            if int(self.msg['userlevel']) <= int(self.sqlCursorOffload[3]):
-                if re.search(self.cfg['regex_filter_links'], self.msg['privmsg']) is not None:
-                    logging.info("Link discovered in %s from user %s", self.msg["channel"], self.msg["username"])
+            if int(self.info['userlevel']) <= int(self.sqlCursorOffload[3]):
+                if re.search(self.cfg['regex_filter_links'], self.info['privmsg']) is not None:
+                    logging.info("Link discovered in %s from user %s", self.info["channel"], self.info["username"])
                     self.UserOffenseCount += 1
                     self.sqlCursorChannel.execute('UPDATE offenses SET offenses = ? WHERE userid = ?',
-                                                  (self.UserOffenseCount, self.msg["user-id"]))
+                                                  (self.UserOffenseCount, self.info["user-id"]))
                     self.sqlConnectionChannel.commit()
 
                     if 0 < self.UserOffenseCount <= 3:
                         reason = "(TIMEOUT) Automatically timed out for posting a link by StrongLegsBot"
-                        self.irc.send_timeout(reason, self.msg['username'],
+                        self.irc.send_timeout(reason, self.info['username'],
                                               self.sqlCursorOffload[(self.UserOffenseCount + 2)])
-                        self.irc.send_privmsg(self.sqlCursorOffload[7].format(**self.msg))
+                        self.irc.send_privmsg(self.sqlCursorOffload[7].format(**self.info))
                         return True
 
                     elif self.UserOffenseCount > 3 and not ban_after_third:
                         reason = "(TIMEOUT) Automatically timed out for posting a link by StrongLegsBot"
-                        self.irc.send_timeout(reason, self.msg['username'], self.sqlCursorOffload[5])
-                        self.irc.send_privmsg(self.sqlCursorOffload[7].format(**self.msg))
+                        self.irc.send_timeout(reason, self.info['username'], self.sqlCursorOffload[5])
+                        self.irc.send_privmsg(self.sqlCursorOffload[7].format(**self.info))
                         return True
 
                     elif self.UserOffenseCount > 3 and ban_after_third:
                         reason = "(BAN) Automatically banned for posting a link by StrongLegsBot"
-                        self.irc.send_ban(reason, self.msg['username'])
-                        self.irc.send_privmsg(self.sqlCursorOffload[7].format(**self.msg))
+                        self.irc.send_ban(reason, self.info['username'])
+                        self.irc.send_privmsg(self.sqlCursorOffload[7].format(**self.info))
                         return True
 
                     else:

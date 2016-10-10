@@ -13,9 +13,10 @@ cfg = unpackconfig.configUnpacker()
 
 
 class diagnostic:
-    def __init__(self, sqlconn):
+    def __init__(self, irc, sqlconn):
         self.mainbotfile = "StrongLegsBot.py"
         self.osplatform = sys.platform
+        self.irc = irc
         self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
 
     # Restarts instance as sockets cannot be reopened
@@ -37,8 +38,9 @@ class diagnostic:
 
 
 class parse:
-    def __init__(self, sqlconn, data):
+    def __init__(self, irc, sqlconn, data):
         self.config = cfg.unpackcfg()
+        self.irc = irc
         self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
 
         self.data_to_parse = data
@@ -532,9 +534,9 @@ class parse:
 
 
 class data:
-    def __init__(self, irc, sqlconn, channel):
+    def __init__(self, irc, sqlconn):
         self.irc = irc
-        self.channel = channel
+        self.channel = irc.CHANNEL
 
         self.sqlconn = sqlconn
         self.sqlConnectionChannel, self.sqlCursorChannel = self.sqlconn

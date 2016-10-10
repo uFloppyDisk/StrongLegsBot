@@ -130,7 +130,7 @@ class Bot:
                     logging.debug(repr(line))
 
                     # Parse and extract data from line and display formatted string
-                    parsetype, identifier, info, display, parsed = _functions.parse(self.sqlconn, line).parse()
+                    parsetype, identifier, info, display, parsed = _functions.parse(irc, self.sqlconn, line).parse()
 
                     if display:
                         logging.info("[%s] :| %s", parsetype.upper(), parsed)
@@ -238,8 +238,8 @@ if __name__ == '__main__':
     bot = Bot()
 
     # Shorten function calls and create instance
-    _funcdiagnose = _functions.diagnostic(bot.sqlconn)
-    _funcdata = _functions.data(irc, bot.sqlconn, irc.CHANNEL)
+    _funcdiagnose = _functions.diagnostic(irc, bot.sqlconn)
+    _funcdata = _functions.data(irc, bot.sqlconn)
 
     logging_levels = {'debug': logging.DEBUG, 'info': logging.INFO,
                       'warning': logging.WARNING, 'error': logging.ERROR,
