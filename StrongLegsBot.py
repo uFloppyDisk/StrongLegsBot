@@ -1,6 +1,8 @@
 import logging
+import os
 import time
 import socket
+import sqlite3 as sql
 import sys
 
 import _functions
@@ -23,6 +25,11 @@ class IRC:
         self.PORT = int(self.config['settings_port'])
 
         self.privmsg_str = "PRIVMSG {channel} :".format(channel=self.CHANNEL)
+        self.custom = False
+
+        if os.path.isfile('debug.txt'):
+            fileread = open('debug.txt', 'r')
+            self.custom = fileread.readline().strip("\n")
 
     def init(self):
         try:
@@ -43,26 +50,30 @@ class IRC:
 
     def send_privmsg(self, output, me=False):
         me = '/me : ' if me else ''
-        formatted_output = "%s{output}\r\n"\
-                           .format(output=output) % me
+        custom = self.custom if self.custom else ''
+        formatted_output = "%s%s{output}\r\n"\
+                           .format(output=output) % (me, custom)
 
         sock.send(self.privmsg_str + formatted_output)
         logging.info("[PRIVMSG] :| [SENT] %s: %s", self.CHANNEL, formatted_output.strip("\r\n"))
 
     def send_timeout(self, output, target, duration):
-        sock.send(self.privmsg_str + '.timeout {target} {duration} {reason}\r\n'
+        custom = self.custom if self.custom else ''
+        sock.send(self.privmsg_str + '.timeout {target} {duration} %s{reason}\r\n'
                   .format(target=target,
                           duration=duration,
-                          reason=output))
+                          reason=output)) % custom
 
     def send_ban(self, output, target):
-        sock.send(self.privmsg_str + '.ban {target} {reason}\r\n'
+        custom = self.custom if self.custom else ''
+        sock.send(self.privmsg_str + '.ban {target} %s{reason}\r\n'
                   .format(target=target,
-                          reason=output))
+                          reason=output)) % custom
 
     def send_whisper(self, output, target):
-        formatted_output = ".w {target} {output}\r\n"\
-                           .format(output=output, target=target)
+        custom = self.custom if self.custom else ''
+        formatted_output = ".w {target} %s{output}\r\n"\
+                           .format(output=output, target=target) % custom
         sock.send(self.privmsg_str + formatted_output)
         logging.info("[WHISPER] :| [SENT] %s: %s" % (self.CHANNEL, formatted_output.strip("\r\n")))
 
@@ -80,6 +91,17 @@ class Bot:
         self.endmarkloop = 0
         self.previous_line = None
         self.mainloopbreak = False
+
+        if sys.platform == "linux2":
+            self.sqlConnectionChannel = sql.connect('SLB.sqlDatabase/{}DB.db'
+                                                    .format(IRC().CHANNEL.strip("#")))
+        else:
+            self.sqlConnectionChannel = sql.connect(os.path.dirname(os.path.abspath(__file__)) + '\SLB.sqlDatabase\{}DB.db'
+                                                    .format(IRC().CHANNEL.strip("#").strip("\n")))
+
+        self.sqlCursorChannel = self.sqlConnectionChannel.cursor()
+
+        self.sqlconn = (self.sqlConnectionChannel, self.sqlCursorChannel)
 
     def main(self):
         while not self.mainloopbreak:
@@ -108,7 +130,7 @@ class Bot:
                     logging.debug(repr(line))
 
                     # Parse and extract data from line and display formatted string
-                    parsetype, identifier, info, display, parsed = _functions.parse(line).parse()
+                    parsetype, identifier, info, display, parsed = _functions.parse(self.sqlconn, line).parse()
 
                     if display:
                         logging.info("[%s] :| %s", parsetype.upper(), parsed)
@@ -145,12 +167,12 @@ class Bot:
 
                         # Passes user through filters if permission level is under 250
                         if userlevel < 250:
-                            if filters.filters(irc, info).linkprotection():
+                            if filters.filters(irc, self.sqlconn, info).linkprotection():
                                 continue  # If one of the filters return a true, the user is omitted
 
                         # -=-=-=-=-=-=-= Non-restricted users past this point =-=-=-=-=-=-=-
 
-                        _funcdata.handleCommands(info, userlevel, info['privmsg'])
+                        _funcdata.handleCommands(info)
 
                         if info["userlevel"] >= 700 and info["privmsg"].startswith("$forcerestart"):
                             _funcdiagnose.bot_restart("Forced restart by bot admin", user_loggingchoice)
@@ -197,7 +219,7 @@ class Bot:
                                             irc.send_privmsg(" ".join(temp_split_message[2:]))
 
                         if temp_split_message[0] == irc.CHANNEL:
-                            _funcdata.handleCommands(info, info["userlevel"], " ".join(temp_split_message[1:]), True)
+                            _funcdata.handleCommands(info, " ".join(temp_split_message[1:]), True)
 
                     if self.temp.index(line) == len(self.temp) - 1:
                         self.endmarkloop = time.time()
@@ -216,8 +238,8 @@ if __name__ == '__main__':
     bot = Bot()
 
     # Shorten function calls and create instance
-    _funcdiagnose = _functions.diagnostic()
-    _funcdata = _functions.data(irc, irc.CHANNEL)
+    _funcdiagnose = _functions.diagnostic(bot.sqlconn)
+    _funcdata = _functions.data(irc, bot.sqlconn, irc.CHANNEL)
 
     logging_levels = {'debug': logging.DEBUG, 'info': logging.INFO,
                       'warning': logging.WARNING, 'error': logging.ERROR,

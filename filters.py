@@ -1,29 +1,16 @@
 import logging
-import os
 import re
-import sqlite3 as sql
-import subprocess
-import sys
-import time
 
-import StrongLegsBot
 import unpackconfig
 
 
 class filters:
-    def __init__(self, irc, info):
+    def __init__(self, irc, sqlconn, info):
         self.cfg = unpackconfig.configUnpacker().unpackcfg()
         self.irc = irc
+        self.sqlconn = sqlconn
+        self.sqlConnectionChannel, self.sqlCursorChannel = self.sqlconn
         self.msg = info
-
-        if sys.platform == "linux2":
-            self.sqlConnectionChannel = sql.connect('SLB.sqlDatabase/{}DB.db'
-                                                    .format(StrongLegsBot.IRC().CHANNEL.strip("#")))
-        else:
-            self.sqlConnectionChannel = sql.connect(os.path.dirname(os.path.abspath(__file__)) + '\SLB.sqlDatabase\{}DB.db'
-                                                    .format(StrongLegsBot.IRC().CHANNEL.strip("#").strip("\n")))
-
-        self.sqlCursorChannel = self.sqlConnectionChannel.cursor()
 
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS filters'
                                       '(filtertype TEXT, enabled TEXT, maxuserlevel INTEGER, first_timeout INTEGER, '

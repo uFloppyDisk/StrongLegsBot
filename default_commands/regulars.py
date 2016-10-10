@@ -1,33 +1,21 @@
 import logging
-import os
-import sys
-import sqlite3 as sql
 
 import default_commands
-from default_commands._exceptions import *
+
 
 class regulars:
-    def __init__(self, irc, msg_info, message, userlevel=0):
+    def __init__(self, irc, sqlconn, info, userlevel=0):
         self.local_dispatch_map = {'add': self.add, 'delete': self.delete, 'help': '',
                                    '': ''}
         self.irc = irc
-        self.msg_info = msg_info
-        self.message = message
+        self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
+        self.info = info
+        self.message = info["privmsg"]
         self.userlevel = userlevel
-
-        if sys.platform == 'linux2':
-            self.sqlConnectionChannel = sql.connect('SLB.sqlDatabase/{}DB.db'
-                                                    .format(self.irc.CHANNEL.strip("#")))
-        else:
-            self.sqlConnectionChannel = sql.connect(os.path.dirname(__file__).rstrip('\\default_commands\\') +
-                                                    '\SLB.sqlDatabase\{}DB.db'
-                                                    .format(self.irc.CHANNEL.strip("#").strip("\n")))
-
-        self.sqlCursorChannel = self.sqlConnectionChannel.cursor()
 
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS regulars(userid INTEGER, username TEXT)')
 
-        temp_split = message.split(' ')
+        temp_split = self.message.split(' ')
         if len(temp_split) > 1:
             if userlevel >= 250:
                 if temp_split[1] == 'add':

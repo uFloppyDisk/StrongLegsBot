@@ -1,36 +1,24 @@
 import logging
-import os
 import re
-import sqlite3 as sql
-import sys
 
 import default_commands
 from default_commands._exceptions import *
 
 
 class Commands:
-    def __init__(self, irc, msg_info, message, userlevel=0):
+    def __init__(self, irc, sqlconn, info, userlevel=0):
         self.local_dispatch_map = {'add': self.add, 'edit': self.edit,
                                    'delete': self.delete, 'help': self.help,
                                    '': self.disp_commands}
         self.irc = irc
-        self.msg_info = msg_info
-        self.message = message
+        self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
+        self.info = info
+        self.message = info["privmsg"]
         self.userlevel = userlevel
-
-        if sys.platform == 'linux2':
-            self.sqlConnectionChannel = sql.connect('SLB.sqlDatabase/{}DB.db'
-                                                    .format(self.irc.CHANNEL.strip("#")))
-        else:
-            self.sqlConnectionChannel = sql.connect(os.path.dirname(__file__).rstrip('\\default_commands\\') +
-                                                    '\SLB.sqlDatabase\{}DB.db'
-                                                    .format(self.irc.CHANNEL.strip("#").strip("\n")))
-
-        self.sqlCursorChannel = self.sqlConnectionChannel.cursor()
 
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS commands(userlevel INTEGER, keyword TEXT, output TEXT, args INTEGER, sendtype TEXT, syntaxerr TEXT)')
 
-        temp_split = message.split(' ')
+        temp_split = self.message.split(' ')
         if len(temp_split) > 1:
             if temp_split[1] == 'help':
                 self.help()
@@ -75,7 +63,7 @@ class Commands:
 
         if sqlCursorOffload == []:
             self.irc.send_whisper("Error: Channel '%s' has no commands available for use with your current userlevel "
-                                  "(%s)" % (self.irc.CHANNEL, self.userlevel), self.msg_info['username'])
+                                  "(%s)" % (self.irc.CHANNEL, self.userlevel), self.info['username'])
             return
 
         for key in sorted(command_dict.keys(), reverse=True):
@@ -83,7 +71,7 @@ class Commands:
 
         self.irc.send_whisper('Custom commands in channel %s, available with your userlevel (%s), are: %s'
                               % (self.irc.CHANNEL, self.userlevel, command_string.strip(" | ")),
-                              self.msg_info['username'])
+                              self.info['username'])
         return
 
     def help(self):
@@ -154,7 +142,7 @@ class Commands:
 
                 if sendmode_specified:
                     pass
-                elif split_params[split_pos].startswith("-sm=") and self.msg_info["userlevel"] >= 400:
+                elif split_params[split_pos].startswith("-sm=") and self.info["userlevel"] >= 400:
                     temp_split_parms = split_params[split_pos].split("=", 1)
                     command_offset += 1
                     if temp_split_parms[1] != '':
@@ -168,7 +156,7 @@ class Commands:
                         self.irc.send_privmsg("Error: Sendmode cannot be nil.")
                         return
 
-                elif split_params[split_pos].startswith("-sm=") and self.msg_info["userlevel"] < 400:
+                elif split_params[split_pos].startswith("-sm=") and self.info["userlevel"] < 400:
                     self.irc.send_privmsg("Permissions Error: You don't have the permissions to specify command "
                                           "sendmode.")
 
@@ -311,7 +299,7 @@ class Commands:
                 if sendmode_specified:
                     pass
 
-                elif split_params[split_pos].startswith("-sm=") and self.msg_info["userlevel"] >= 400:
+                elif split_params[split_pos].startswith("-sm=") and self.info["userlevel"] >= 400:
                     temp_split_parms = split_params[split_pos].split("=", 1)
                     command_offset += 1
                     if temp_split_parms[1] != '':
@@ -325,7 +313,7 @@ class Commands:
                         self.irc.send_privmsg("Error: Sendmode cannot be nil.")
                         return
 
-                elif split_params[split_pos].startswith("-sm=") and self.msg_info["userlevel"] < 400:
+                elif split_params[split_pos].startswith("-sm=") and self.info["userlevel"] < 400:
                     self.irc.send_privmsg("Permissions Error: You don't have the permissions to specify command "
                                           "sendmode.")
 

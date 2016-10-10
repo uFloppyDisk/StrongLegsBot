@@ -1,7 +1,6 @@
 import os
 import sqlite3 as sql
 import threading
-import time
 
 import StrongLegsBot
 
@@ -18,7 +17,7 @@ class timer:
         self.test_timer = None
 
     def privmsg_timer(self, timer_delay, timer_privmsg):
-        StrongLegsBot.IRC().send_to_twitch('privmsg', timer_privmsg)
+        StrongLegsBot.IRC().send_privmsg(timer_privmsg)
         self.test_timer = threading.Timer(timer_delay, self.privmsg_timer, [timer_delay, timer_privmsg])
         self.test_timer.start()
 

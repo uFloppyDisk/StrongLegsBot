@@ -1,32 +1,22 @@
 import logging
-import os
 import re
-import sqlite3 as sql
 import subprocess
 import sys
 import time
 
-import default_commands
 import StrongLegsBot
+import default_commands
 import unpackconfig
 
 bot = StrongLegsBot.Bot()
 cfg = unpackconfig.configUnpacker()
 
-if sys.platform == "linux2":
-    sqlConnectionChannel = sql.connect('SLB.sqlDatabase/{}DB.db'
-                                       .format(StrongLegsBot.IRC().CHANNEL.strip("#")))
-else:
-    sqlConnectionChannel = sql.connect(os.path.dirname(os.path.abspath(__file__)) + '\SLB.sqlDatabase\{}DB.db'
-                                       .format(StrongLegsBot.IRC().CHANNEL.strip("#").strip("\n")))
-
-sqlCursorChannel = sqlConnectionChannel.cursor()
-
 
 class diagnostic:
-    def __init__(self):
+    def __init__(self, sqlconn):
         self.mainbotfile = "StrongLegsBot.py"
         self.osplatform = sys.platform
+        self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
 
     # Restarts instance as sockets cannot be reopened
     def bot_restart(self, possible_exit, logging_level):
@@ -37,8 +27,8 @@ class diagnostic:
             subprocess.call([opener, self.mainbotfile, StrongLegsBot.IRC().CHANNEL, logging_level])
 
             # Closes SQLite connections if restart failed
-            sqlCursorChannel.close()
-            sqlConnectionChannel.close()
+            self.sqlCursorChannel.close()
+            self.sqlConnectionChannel.close()
 
             raise SystemExit
 
@@ -47,8 +37,9 @@ class diagnostic:
 
 
 class parse:
-    def __init__(self, data):
+    def __init__(self, sqlconn, data):
         self.config = cfg.unpackcfg()
+        self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
 
         self.data_to_parse = data
         self.parsetype = None
@@ -185,9 +176,9 @@ class parse:
                 servermsg["channel"] = ircinfo[1]
                 servermsg["privmsg"] = servermsg_split[2].strip('\r')
 
-                sqlCursorChannel.execute('SELECT userlevel FROM userLevel WHERE userid == ?',
-                                         (servermsg["user-id"],))
-                sqlCursorOffload = sqlCursorChannel.fetchone()
+                self.sqlCursorChannel.execute('SELECT userlevel FROM userLevel WHERE userid == ?',
+                                             (servermsg["user-id"],))
+                sqlCursorOffload = self.sqlCursorChannel.fetchone()
                 if sqlCursorOffload is None:
                     sqlCursorOffload = ("---",)
 
@@ -541,18 +532,21 @@ class parse:
 
 
 class data:
-    def __init__(self, irc, channel):
+    def __init__(self, irc, sqlconn, channel):
         self.irc = irc
         self.channel = channel
 
-        sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS userLevel(userid INTEGER, userlevel INTEGER, username TEXT)')
+        self.sqlconn = sqlconn
+        self.sqlConnectionChannel, self.sqlCursorChannel = self.sqlconn
+
+        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS userLevel(userid INTEGER, userlevel INTEGER, username TEXT)')
 
     def handleUserLevel(self, handleuserlevel, whisper=False):
         userid, username, usertype, subscriber, turbo = handleuserlevel
         try:
-            sqlCursorChannel.execute('SELECT userid FROM regulars WHERE userid == ?', (userid,))
+            self.sqlCursorChannel.execute('SELECT userid FROM regulars WHERE userid == ?', (userid,))
 
-            isRegular = sqlCursorChannel.fetchone()
+            isRegular = self.sqlCursorChannel.fetchone()
             userlevel = 0
             dictUserType = {'mod': 250, 'global_mod': 350,
                             'admin': 500, 'staff': 600}
@@ -581,23 +575,23 @@ class data:
                 else:
                     userlevel = -1
 
-                sqlCursorChannel.execute('SELECT userlevel FROM userLevel WHERE userid == ?', (userid,))
-                sqlCursorOffload = sqlCursorChannel.fetchone()
+                self.sqlCursorChannel.execute('SELECT userlevel FROM userLevel WHERE userid == ?', (userid,))
+                sqlCursorOffload = self.sqlCursorChannel.fetchone()
 
                 if not sqlCursorOffload:
                     logging.debug("Adding user to userLevel for channel %s", self.channel)
-                    sqlCursorChannel.execute('INSERT INTO userLevel (userid, userlevel, username) VALUES (?, ?, ?)',
-                                             (userid, userlevel, username))
+                    self.sqlCursorChannel.execute('INSERT INTO userLevel (userid, userlevel, username) VALUES (?, ?, ?)',
+                                                 (userid, userlevel, username))
 
                 elif userlevel != sqlCursorOffload[0]:
                     logging.debug("Userlevel mismatch in %s", self.channel)
-                    sqlCursorChannel.execute('UPDATE userLevel SET userlevel = ? WHERE userid == ?',
-                                             (userlevel, userid))
+                    self.sqlCursorChannel.execute('UPDATE userLevel SET userlevel = ? WHERE userid == ?',
+                                                 (userlevel, userid))
 
                 else:
                     pass
 
-                sqlConnectionChannel.commit()
+                self.sqlConnectionChannel.commit()
 
             else:
                 if username == 'thekillar25':
@@ -622,22 +616,27 @@ class data:
         except Exception as e:
             logging.exception(e)
 
-    def handleCommands(self, info, userlevel, message, whisperaccess=False):
+    def handleCommands(self, info, message=False, whisperaccess=False):
         # Deal with variables/sql
+        if message is False:
+            message = info["privmsg"]
+        else:
+            message = message
 
+        userlevel = info["userlevel"]
         info["help"] = info.keys()
         split_message = message.split(" ")
         info["arg1"] = "nil" if (len(split_message) - 1) < 1 else split_message[1]
         info["arg2"] = "nil" if (len(split_message) - 1) < 2 else split_message[2]
         info["arg3"] = "nil" if (len(split_message) - 1) < 3 else split_message[3]
 
-        sqlCursorChannel.execute('SELECT * FROM commands WHERE userlevel <= ?',
-                                 (userlevel,))
-        sqlCursorOffload = sqlCursorChannel.fetchall()
+        self.sqlCursorChannel.execute('SELECT * FROM commands WHERE userlevel <= ?',
+                                     (userlevel,))
+        sqlCursorOffload = self.sqlCursorChannel.fetchall()
 
         if whisperaccess:
-            sqlCursorChannel.execute('SELECT userlevel FROM userLevel WHERE username == ?', (info['username'],))
-            temp_userlevel = sqlCursorChannel.fetchone()
+            self.sqlCursorChannel.execute('SELECT userlevel FROM userLevel WHERE username == ?', (info['username'],))
+            temp_userlevel = self.sqlCursorChannel.fetchone()
             if temp_userlevel is not None:
                 userlevel = temp_userlevel[0]
             else:
@@ -645,7 +644,7 @@ class data:
 
         temp_message_split = message.split(" ", 1)
         if temp_message_split[0] in default_commands.dispatch_map.keys():
-            default_commands.dispatch_map[temp_message_split[0]](self.irc, info, message, userlevel)
+            default_commands.dispatch_map[temp_message_split[0]](self.irc, self.sqlconn, info, userlevel)
             return
 
         # For every command in DB
@@ -700,7 +699,3 @@ class data:
                 return
 
         return
-
-    @staticmethod
-    def closeSqlConnection():
-        sqlConnectionChannel.close()
