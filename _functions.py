@@ -177,7 +177,7 @@ class parse:
                 servermsg["privmsg"] = servermsg_split[2].strip('\r')
 
                 self.sqlCursorChannel.execute('SELECT userlevel FROM userLevel WHERE userid == ?',
-                                             (servermsg["user-id"],))
+                                              (servermsg["user-id"],))
                 sqlCursorOffload = self.sqlCursorChannel.fetchone()
                 if sqlCursorOffload is None:
                     sqlCursorOffload = ("---",)
@@ -237,10 +237,10 @@ class parse:
                                      "target_username": clearchat_chatter.group(5)}
 
                         return servermsg, "[%s] %s: TIMEOUT:%s TTL:%s Reason:%s" % (dictIdentifer[identifier],
-                                                                                   servermsg["channel"],
-                                                                                   servermsg["target_username"],
-                                                                                   servermsg["duration"],
-                                                                                   servermsg["reason"])
+                                                                                    servermsg["channel"],
+                                                                                    servermsg["target_username"],
+                                                                                    servermsg["duration"],
+                                                                                    servermsg["reason"])
 
                     if clearchat_chatter.group(2) is None:
                         servermsg = {"reason": clearchat_chatter.group(1).replace("\s", " ")
@@ -249,9 +249,9 @@ class parse:
                                      "target_username": clearchat_chatter.group(5)}
 
                         return servermsg, "[%s] %s: BAN:%s Reason:%s" % (dictIdentifer[identifier],
-                                                                        servermsg["channel"],
-                                                                        servermsg["target_username"],
-                                                                        servermsg["reason"])
+                                                                         servermsg["channel"],
+                                                                         servermsg["target_username"],
+                                                                         servermsg["reason"])
 
                 return servermsg, "[%s] %s" % (dictIdentifer[identifier], servermsg[1])
 
@@ -332,7 +332,7 @@ class parse:
                 servermsg["mode"] = ircinfo[3]
                 servermsg["username"] = ircinfo[4]
                 return servermsg, "[%s] %s: (%s) %s" % (identifier, servermsg["channel"],
-                                                       servermsg["mode"], servermsg["username"])
+                                                        servermsg["mode"], servermsg["username"])
 
             elif identifier == "NOTICE":
                 #############################
@@ -452,14 +452,14 @@ class parse:
                                      "channel": servermsg.group(15), "message": servermsg.group(16)}
 
                         return servermsg, "[%s] %s: (%s) Userid: %s Username: %s consMonth: %s sysMsg: %s : %s" % \
-                               (dictIdentifer[identifier],
-                                servermsg["channel"],
-                                servermsg["msg-id"],
-                                servermsg["user-id"],
-                                servermsg["username"],
-                                servermsg["msg-param-months"],
-                                servermsg["system-msg"].replace("\s", " "),
-                                servermsg["message"])
+                            (dictIdentifer[identifier],
+                             servermsg["channel"],
+                             servermsg["msg-id"],
+                             servermsg["user-id"],
+                             servermsg["username"],
+                             servermsg["msg-param-months"],
+                             servermsg["system-msg"].replace("\s", " "),
+                             servermsg["message"])
                     else:
                         servermsg = re.search(self.config["regex_server_usernotice_nousermsg"], data)
                         servermsg = {"badges": servermsg.group(1), "color": servermsg.group(2),
@@ -472,13 +472,13 @@ class parse:
                                      "channel": servermsg.group(15)}
 
                         return servermsg, "[%s] %s: (%s) Userid: %s Username: %s consMonth: %s sysMsg: %s" % \
-                               (dictIdentifer[identifier],
-                                servermsg["channel"],
-                                servermsg["msg-id"],
-                                servermsg["user-id"],
-                                servermsg["username"],
-                                servermsg["msg-param-months"],
-                                servermsg["system-msg"].replace("\s", " "))
+                                          (dictIdentifer[identifier],
+                                           servermsg["channel"],
+                                           servermsg["msg-id"],
+                                           servermsg["user-id"],
+                                           servermsg["username"],
+                                           servermsg["msg-param-months"],
+                                           servermsg["system-msg"].replace("\s", " "))
 
                 except Exception as e:
                     logging.error("Usernotice parse error: %s", e)
@@ -581,12 +581,12 @@ class data:
                 if not sqlCursorOffload:
                     logging.debug("Adding user to userLevel for channel %s", self.channel)
                     self.sqlCursorChannel.execute('INSERT INTO userLevel (userid, userlevel, username) VALUES (?, ?, ?)',
-                                                 (userid, userlevel, username))
+                                                  (userid, userlevel, username))
 
                 elif userlevel != sqlCursorOffload[0]:
                     logging.debug("Userlevel mismatch in %s", self.channel)
                     self.sqlCursorChannel.execute('UPDATE userLevel SET userlevel = ? WHERE userid == ?',
-                                                 (userlevel, userid))
+                                                  (userlevel, userid))
 
                 else:
                     pass
@@ -631,7 +631,7 @@ class data:
         info["arg3"] = "nil" if (len(split_message) - 1) < 3 else split_message[3]
 
         self.sqlCursorChannel.execute('SELECT * FROM commands WHERE userlevel <= ?',
-                                     (userlevel,))
+                                      (userlevel,))
         sqlCursorOffload = self.sqlCursorChannel.fetchall()
 
         if whisperaccess:
