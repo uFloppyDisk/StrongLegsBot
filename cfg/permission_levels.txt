@@ -1,0 +1,10 @@
+   0 - Normal users
+  50 - Turbo
+ 100 - Subscribers
+ 150 - Regulars
+ 250 - Moderators
+ 350 - Global Moderators
+ 400 - Broadcaster
+ 500 - Admin
+ 600 - Staff
+ 700 - TheKillar25

@@ -1,0 +1,3 @@
+$faq add [-ul=<ul>, -sm=(privmsg/whisper)] <name> r'(.*)test(.*)' <output>
+
+Yes \'its a best regex(.*aaaa)'\

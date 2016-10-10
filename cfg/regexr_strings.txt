@@ -1,0 +1,32 @@
+Welcome to RegExr v2.1 by gskinner.com, proudly hosted by Media Temple!
+
+Edit the Expression & Text to see matches. Roll over matches or the expression for details. Undo mistakes with ctrl-z. Save Favorites & Share expressions with friends or the Community. Explore your results with Tools. A full Reference & Help is available in the Library, or watch the video Tutorial.
+
+@badges=moderator/1;color=#0000FF;display-name=TheKillar25;emotes=;id=526fea7b-50f4-4e88-a4a5-68930db13776;mod=1;room-id=95306792;subscriber=0;turbo=0;user-id=37705020;user-type=mod :thekillar25!thekillar25@thekillar25.tmi.twitch.tv PRIVMSG #stronglegss :test
+
+:tmi.twitch.tv CLEARCHAT #stronglegss
+@ban-duration=10;ban-reason=test\syo :tmi.twitch.tv CLEARCHAT #stronglegss :stronglegsbot_tester
+@ban-duration=10;ban-reason= :tmi.twitch.tv CLEARCHAT #channel :target_username
+
+@ban-reason=Follow\sthe\srules :tmi.twitch.tv CLEARCHAT #channel :target_username
+@ban-reason= :tmi.twitch.tv CLEARCHAT #channel :target_username
+:deathcookiecyko!deathcookiecyko@deathcookiecyko.tmi.twitch.tv JOIN #stronglegss
+:twitch_username!twitch_username@twitch_username.tmi.twitch.tv PART #channel
+:jtv MODE #stronglegss +o nightbot
+@msg-id=slow_off :tmi.twitch.tv NOTICE #channel :This room is no longer in slow mode.
+
+@badges=moderator/1;color=#008000;display-name=StrongLegsBot;emote-sets=0;mod=1;subscriber=0;turbo=0;user-type=mod :tmi.twitch.tv USERSTATE #stronglegss
+@broadcaster-lang=;emote-only=0;r9k=0;slow=0;subs-only=0 :tmi.twitch.tv ROOMSTATE #stronglegss
+
+> :tmi.twitch.tv HOSTTARGET #hosting_channel :target_channel [number]
+> :tmi.twitch.tv HOSTTARGET #hosting_channel :- [number]
+
+Sample text for testing:
+abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ
+0123456789 _+-.,!@#$%^&*();\/|<>"'
+12345 -98.7 3.141 .6180 9,000 +42
+555.123.4567	+1-(800)-555-2468
+foo@demo.net	bar.ba@test.co.uk
+www.demo.com	http://foo.co.uk/
+http://regexr.com/foo.html?q=bar
+https://mediatemple.net

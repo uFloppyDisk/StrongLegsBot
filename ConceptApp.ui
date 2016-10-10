@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>795</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <widget class="QTreeWidget" name="treeWidget">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>10</y>
+      <width>761</width>
+      <height>371</height>
+     </rect>
+    </property>
+    <property name="rootIsDecorated">
+     <bool>false</bool>
+    </property>
+    <property name="uniformRowHeights">
+     <bool>false</bool>
+    </property>
+    <property name="itemsExpandable">
+     <bool>false</bool>
+    </property>
+    <property name="allColumnsShowFocus">
+     <bool>false</bool>
+    </property>
+    <property name="wordWrap">
+     <bool>true</bool>
+    </property>
+    <property name="headerHidden">
+     <bool>false</bool>
+    </property>
+    <property name="expandsOnDoubleClick">
+     <bool>true</bool>
+    </property>
+    <attribute name="headerVisible">
+     <bool>true</bool>
+    </attribute>
+    <attribute name="headerCascadingSectionResizes">
+     <bool>true</bool>
+    </attribute>
+    <attribute name="headerDefaultSectionSize">
+     <number>75</number>
+    </attribute>
+    <attribute name="headerHighlightSections">
+     <bool>true</bool>
+    </attribute>
+    <attribute name="headerMinimumSectionSize">
+     <number>50</number>
+    </attribute>
+    <attribute name="headerShowSortIndicator" stdset="0">
+     <bool>false</bool>
+    </attribute>
+    <attribute name="headerStretchLastSection">
+     <bool>true</bool>
+    </attribute>
+    <column>
+     <property name="text">
+      <string>UTags</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>Username</string>
+     </property>
+    </column>
+    <column>
+     <property name="text">
+      <string>Message</string>
+     </property>
+    </column>
+    <item>
+     <property name="text">
+      <string>MOD</string>
+     </property>
+     <property name="text">
+      <string>TheKillar25</string>
+     </property>
+     <property name="text">
+      <string>Test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test test</string>
+     </property>
+    </item>
+    <item>
+     <property name="text">
+      <string>---</string>
+     </property>
+     <property name="text">
+      <string>chinorlf</string>
+     </property>
+     <property name="text">
+      <string>Hey guys, I'm gay</string>
+     </property>
+    </item>
+   </widget>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>795</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>File</string>
+    </property>
+    <addaction name="actionQuit"/>
+   </widget>
+   <widget class="QMenu" name="menuIRC">
+    <property name="title">
+     <string>IRC</string>
+    </property>
+    <addaction name="actionMessage_as_Bot"/>
+    <addaction name="actionWhisper_as_Bot"/>
+    <addaction name="separator"/>
+    <addaction name="actionTimeout_as_Bot"/>
+    <addaction name="actionBan_as_Bot"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuIRC"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionQuit">
+   <property name="text">
+    <string>Quit</string>
+   </property>
+  </action>
+  <action name="actionMessage_as_Bot">
+   <property name="text">
+    <string>Message as Bot</string>
+   </property>
+  </action>
+  <action name="actionWhisper_as_Bot">
+   <property name="text">
+    <string>Whisper as Bot</string>
+   </property>
+  </action>
+  <action name="actionTimeout_as_Bot">
+   <property name="text">
+    <string>Timeout as Bot</string>
+   </property>
+  </action>
+  <action name="actionBan_as_Bot">
+   <property name="text">
+    <string>Ban as Bot</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

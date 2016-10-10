@@ -1,0 +1,33 @@
+badges=moderator/1;color=#0000FF;display-name=TheKillar25;emotes=;id=399e1f55-9661-408b-a2e5-177fe812239e;mod=1;room-id=95306792;subscriber=0;turbo=0;user-id=37705020;user-type=mod :thekillar25!thekillar25@thekillar25.tmi.twitch.tv PRIVMSG #stronglegss :suh
+
+SPLIT ' :'(
+	badges=moderator/1;color=#0000FF;display-name=TheKillar25;emotes=;id=399e1f55-9661-408b-a2e5-177fe812239e;mod=1;room-id=95306792;subscriber=0;turbo=0;user-id=37705020;user-type=mod
+
+		SPLIT ';'(
+			badges=moderator/1
+			color=#0000FF
+			display-name=TheKillar25
+			emotes=
+			id=399e1f55-9661-408b-a2e5-177fe812239e
+			mod=1
+			room-id=95306792
+			subscriber=0
+			turbo=0
+			user-id=37705020
+			user-type=mod
+		)
+
+	thekillar25!thekillar25@thekillar25.tmi.twitch.tv PRIVMSG #stronglegss
+
+		SPLIT ' PRIVMSG '(
+			thekillar25!thekillar25@thekillar25.tmi.twitch.tv
+
+				SPLIT '!'(
+					thekillar25
+					thekillar25@thekillar25.tmi.twitch.tv
+				)
+			#stronglegss
+		)
+
+	suh
+)

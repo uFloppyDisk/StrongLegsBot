@@ -1,0 +1,23 @@
+badges=;color=#008000;display-name=StrongLegsBot;emote-sets=0;user-id=118299051;user-type= :tmi.twitch.tv GLOBALUSERSTATE
+
+SPLIT ' :'(
+	badges=;color=#008000;display-name=StrongLegsBot;emote-sets=0;user-id=118299051;user-type=
+
+		SPLIT ';'(
+			badges=
+			color=#008000
+			display-name=StrongLegsBot
+			emote-sets=0
+			user-id=118299051
+			user-type=\s
+		)
+
+	tmi.twitch.tv GLOBALUSERSTATE
+
+		SPLIT ' '(
+			tmi.twitch.tv
+
+			GLOBALUSERSTATE
+		)
+
+)
