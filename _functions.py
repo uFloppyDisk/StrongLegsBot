@@ -128,11 +128,11 @@ class parse:
                              "id": servermsg.group(5), "threadid": servermsg.group(6),
                              "turbo": servermsg.group(7), "user-id": servermsg.group(8),
                              "user-type": servermsg.group(9), "username": servermsg.group(10),
-                             "receiver": servermsg.group(11), "message": servermsg.group(12)}
+                             "receiver": servermsg.group(11), "privmsg": servermsg.group(12)}
 
                 return self.parsetype, self.parsetype, servermsg, False,  "[RECV] %s_%s: %s" % (servermsg["id"],
                                                                                                 servermsg["username"],
-                                                                                                servermsg["message"])
+                                                                                                servermsg["privmsg"])
 
             elif self.parsetype == 'privmsg':
                 #############################
