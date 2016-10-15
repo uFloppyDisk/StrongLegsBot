@@ -130,9 +130,9 @@ class parse:
                              "user-type": servermsg.group(9), "username": servermsg.group(10),
                              "receiver": servermsg.group(11), "message": servermsg.group(12)}
 
-                return self.parsetype, self.parsetype, servermsg, True,  "[RECV] %s_%s: %s" % (servermsg["id"],
-                                                                                               servermsg["username"],
-                                                                                               servermsg["message"])
+                return self.parsetype, self.parsetype, servermsg, False,  "[RECV] %s_%s: %s" % (servermsg["id"],
+                                                                                                servermsg["username"],
+                                                                                                servermsg["message"])
 
             elif self.parsetype == 'privmsg':
                 #############################
@@ -542,6 +542,16 @@ class data:
         self.sqlConnectionChannel, self.sqlCursorChannel = self.sqlconn
 
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS userLevel(userid INTEGER, userlevel INTEGER, username TEXT)')
+        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS commands(userlevel INTEGER, keyword TEXT, output TEXT, args INTEGER, sendtype TEXT, syntaxerr TEXT)')
+        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS regulars(userid INTEGER, username TEXT)')
+        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS faq(userlevel INTEGER, name TEXT, regexp TEXT, output TEXT, sendtype TEXT)')
+        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS filters'
+                                      '(filtertype TEXT, enabled TEXT, maxuserlevel INTEGER, first_timeout INTEGER, '
+                                      'second_timeout INTEGER, third_timeout INTEGER, ban_after_third TEXT, message TEXT)')
+        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS offenses'
+                                      '(userid INTEGER, username TEXT, offenses INTEGER)')
+
+        self.sqlConnectionChannel.commit()
 
     def handleUserLevel(self, handleuserlevel, whisper=False):
         userid, username, usertype, subscriber, turbo = handleuserlevel
@@ -632,10 +642,6 @@ class data:
         info["arg2"] = "nil" if (len(split_message) - 1) < 2 else split_message[2]
         info["arg3"] = "nil" if (len(split_message) - 1) < 3 else split_message[3]
 
-        self.sqlCursorChannel.execute('SELECT * FROM commands WHERE userlevel <= ?',
-                                      (userlevel,))
-        sqlCursorOffload = self.sqlCursorChannel.fetchall()
-
         if whisperaccess:
             self.sqlCursorChannel.execute('SELECT userlevel FROM userLevel WHERE username == ?', (info['username'],))
             temp_userlevel = self.sqlCursorChannel.fetchone()
@@ -648,6 +654,10 @@ class data:
         if temp_message_split[0] in default_commands.dispatch_map.keys():
             default_commands.dispatch_map[temp_message_split[0]](self.irc, self.sqlconn, info, userlevel)
             return
+
+        self.sqlCursorChannel.execute('SELECT * FROM commands WHERE userlevel <= ?',
+                                      (userlevel,))
+        sqlCursorOffload = self.sqlCursorChannel.fetchall()
 
         # For every command in DB
         for command in sqlCursorOffload:

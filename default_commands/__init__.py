@@ -15,6 +15,7 @@ help_defaults = {
     dispatch_naming['commands']: {
         '': '{command} help/add/edit/delete',
         'help': '{command} help <command> <args...>',
+        'page': '{command} page <page#>',
         'add': '{command} add [optional: \'-ul=###\' or \'-sm=whisper/privmsg\'] '
                '<keyword> <output> (userlevel defaults to 0)',
         'edit': '{command} edit <keyword> \'-ul=<userlevel>\' and/or \'-sm=whisper/privmsg\' and/or '

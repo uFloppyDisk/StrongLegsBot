@@ -22,6 +22,8 @@ class Commands:
         if len(temp_split) > 1:
             if temp_split[1] == 'help':
                 self.help()
+            elif temp_split[1] == 'page':
+                pass
             elif userlevel >= 250:
                 if temp_split[1] == 'add':
                     self.add()
@@ -69,10 +71,14 @@ class Commands:
         for key in sorted(command_dict.keys(), reverse=True):
             command_string += ("%s: %s | " % (key, ", ".join(sorted(command_dict[key]))))
 
-        self.irc.send_whisper('Custom commands in channel %s, available with your userlevel (%s), are: %s'
-                              % (self.irc.CHANNEL, self.userlevel, command_string.strip(" | ")),
-                              self.info['username'])
+        whisper_string = 'Custom commands in channel %s, available with your userlevel (%s), are: %s'\
+                         % (self.irc.CHANNEL, self.userlevel, command_string.strip(" | "))
+
+        self.irc.send_whisper(whisper_string, self.info['username'])
         return
+
+    def page(self):
+        pass
 
     def help(self):
         parameters = self.message.split("help", 1)

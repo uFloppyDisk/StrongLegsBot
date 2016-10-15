@@ -25,22 +25,27 @@ class filters:
         self.sqlCursorOffload = self.sqlCursorChannel.fetchall()
 
         lstFiltertypes = ['link', 'spam', 'emote_spam', 'banphrases']
+        if len(lstFiltertypes) > len(self.sqlCursorOffload):
+            for filtertype in lstFiltertypes:
+                lstHits = []
+                for x in range(len(self.sqlCursorOffload)):
+                    if filtertype not in self.sqlCursorOffload[x]:
+                        lstHits.append(0)
+                    else:
+                        lstHits.append(1)
+                        break
 
-        # if len(lstFiltertypes) > len(self.sqlCursorOffload):
-        #     for filtertype in lstFiltertypes:
-        #         for x in range(len(self.sqlCursorOffload)):
-        #             if filtertype not in self.sqlCursorOffload[x][0]:
-        #                 logging.warning("%s not found in sql database" % filtertype)
-        #                 self.sqlCursorChannel.execute('INSERT INTO filters (filtertype, enabled) VALUES (?, ?)',
-        #                                               (filtertype, "false"))
-        #                 self.sqlConnectionChannel.commit()
-        #                 break
+                else:
+                    if 1 not in lstHits:
+                        logging.warning("%s not found in sql database" % filtertype)
+                        del lstHits
+                        self.sqlCursorChannel.execute('INSERT INTO filters (filtertype, enabled) VALUES (?, ?)',
+                                                      (filtertype, "false"))
+                        self.sqlConnectionChannel.commit()
 
         # try:
-        self.sqlCursorChannel.execute('SELECT maxuserlevel, first_timeout, second_timeout, third_timeout, '
-                                      'ban_after_third, message FROM filters')
+        self.sqlCursorChannel.execute('SELECT * FROM filters')
         self.sqlCursorOffload = self.sqlCursorChannel.fetchall()
-        iter_row = -1
 
         dictColumns = {0: "maxuserlevel", 1: "first_timeout",
                        2: "second_timeout", 3: "third_timeout",
@@ -50,18 +55,15 @@ class filters:
                         "second_timeout": 600, "third_timeout": 600,
                         "ban_after_third": "false", "message": "None"}
 
-        if None in self.sqlCursorOffload or '' in self.sqlCursorOffload:
-            for row in self.sqlCursorOffload[0:]:
-                iter_row += 1
-                iter_column = -1
-                for column in self.sqlCursorOffload[iter_row]:
-                    iter_column += 1
-                    if column is None:
-                        self.sqlCursorChannel.execute('UPDATE filters SET {} = ?'.format(dictColumns[iter_column]),
-                                                      (dictDefaults[dictColumns[iter_column]],))
+        for tuple in self.sqlCursorOffload:
+            if None in tuple or '' in tuple:
+                x = -2
+                for column in tuple:
+                    if (column is None or column is '') and x >= 0:
+                        self.sqlCursorChannel.execute('UPDATE filters SET {} = ?'.format(dictColumns[x]),
+                                                      (dictDefaults[dictColumns[x]],))
                         self.sqlConnectionChannel.commit()
-                        # except Exception as err:
-                        #     logging.error(err)
+                    x += 1
 
         self.sqlCursorChannel.execute('SELECT * FROM offenses WHERE userid == ?',
                                       (self.info["user-id"],))
@@ -82,12 +84,16 @@ class filters:
         self.sqlCursorChannel.execute('SELECT * FROM filters WHERE filtertype == ?', ("link",))
         self.sqlCursorOffload = self.sqlCursorChannel.fetchone()
 
+        if self.sqlCursorOffload is None:
+            return False
+
         enabled = False
         ban_after_third = False
+
         if self.sqlCursorOffload[1] == 'true':
             enabled = True
         elif self.sqlCursorOffload[1] == 'false':
-            enabled = False
+            return False
 
         if self.sqlCursorOffload[6] == 'true':
             ban_after_third = True

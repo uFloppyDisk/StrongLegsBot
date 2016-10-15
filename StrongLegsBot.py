@@ -18,7 +18,7 @@ class IRC:
     def __init__(self):
         # Initializes all class variables
         self.config = cfg.unpackcfg()
-        self.CHANNEL = sys.argv[1] if len(sys.argv) > 1 else "#stronglegss"
+        self.CHANNEL = sys.argv[1] if len(sys.argv) > 1 else "#thekillar25"
         self.USERNAME = self.config['settings_username']
         self.PASSWORD = self.config['settings_password']
         self.HOST = self.config['settings_host']
@@ -103,6 +103,8 @@ class Bot:
 
         self.sqlconn = (self.sqlConnectionChannel, self.sqlCursorChannel)
 
+        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS config(variable TEXT, value TEXT, args TEXT)')
+
     def main(self):
         while not self.mainloopbreak:
             try:
@@ -168,7 +170,7 @@ class Bot:
                         # Passes user through filters if permission level is under 250
                         if userlevel < 250:
                             if filters.filters(irc, self.sqlconn, info).linkprotection():
-                                continue  # If one of the filters return a true, the user is omitted
+                                continue  # If one of the filters return True, the user is omitted
 
                         # -=-=-=-=-=-=-= Non-restricted users past this point =-=-=-=-=-=-=-
 
@@ -179,6 +181,9 @@ class Bot:
 
                     # Find and deal with whispers
                     if identifier == "whisper":
+                        if irc.CHANNEL in info['message']:
+                            logging.info("[%s] :| %s", parsetype.upper(), parsed)
+
                         handleuserlevel = (info["user-id"], info["username"], info["user-type"],
                                            0, info["turbo"])
                         userlevel = _funcdata.handleUserLevel(handleuserlevel, True)
