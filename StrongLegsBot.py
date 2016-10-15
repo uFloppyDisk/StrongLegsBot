@@ -181,7 +181,7 @@ class Bot:
 
                     # Find and deal with whispers
                     if identifier == "whisper":
-                        if irc.CHANNEL in info['message']:
+                        if irc.CHANNEL in info['privmsg']:
                             logging.info("[%s] :| %s", parsetype.upper(), parsed)
 
                         handleuserlevel = (info["user-id"], info["username"], info["user-type"],
@@ -189,7 +189,7 @@ class Bot:
                         userlevel = _funcdata.handleUserLevel(handleuserlevel, True)
                         info["userlevel"] = userlevel
 
-                        temp_split_message = info["message"].split(" ")
+                        temp_split_message = info["privmsg"].split(" ")
                         if info["username"] == 'thekillar25':
                             if temp_split_message[0] == '!reload':
                                 logging.warning("IMPORTANT: Reloading app resources")
