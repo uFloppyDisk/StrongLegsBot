@@ -635,6 +635,9 @@ class data:
         else:
             message = message
 
+        if whisperaccess and message is not False:
+            info["privmsg"] = message
+
         userlevel = info["userlevel"]
         info["help"] = info.keys()
         split_message = message.split(" ")
