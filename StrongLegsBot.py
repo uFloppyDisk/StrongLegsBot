@@ -92,6 +92,19 @@ class Bot:
         self.previous_line = None
         self.mainloopbreak = False
 
+        self.sqlConnectionChannel = None
+        self.sqlCursorChannel = None
+        self.sqlconn = None
+
+        self.ignoredusersfile = None
+        self.ignoredusersread = None
+        self.ignoredusers = None
+
+    def init(self):
+        self.ignoredusersfile = open('ignoredusers.txt', 'r')
+        self.ignoredusersread = self.ignoredusersfile.readlines()
+        self.ignoredusers = [username.strip('\n').strip('\r') for username in self.ignoredusersread]
+
         if sys.platform == "linux2":
             self.sqlConnectionChannel = sql.connect('SLB.sqlDatabase/{}DB.db'
                                                     .format(IRC().CHANNEL.strip("#")))
@@ -136,6 +149,9 @@ class Bot:
 
                     if display:
                         logging.info("[%s] :| %s", parsetype.upper(), parsed)
+
+                    if "username" in info and info["username"] in self.ignoredusers:
+                        continue
 
                     if identifier == "366":
                         logging.info("[_BOTCOM] :| [JOIN] Joined %s Successfully..." % irc.CHANNEL)
@@ -211,6 +227,21 @@ class Bot:
 
                                         _funcdiagnose.bot_restart("Forced restart by admin", user_loggingchoice)
 
+                            if temp_split_message[0] == '$stop':
+                                if len(temp_split_message) == 2:
+                                    if temp_split_message[1] in ('all', irc.CHANNEL):
+                                        self.mainloopbreak = True
+                                        break
+                                elif len(temp_split_message) > 2:
+                                    if temp_split_message[1] in ('all', irc.CHANNEL):
+                                        if temp_split_message[2] in ('/me', '.me'):
+                                            irc.send_privmsg(" ".join(temp_split_message[3:]), True)
+                                        else:
+                                            irc.send_privmsg(" ".join(temp_split_message[2:]))
+
+                                        self.mainloopbreak = True
+                                        break
+
                             if temp_split_message[0] == '$send' and userlevel >= 400:
                                 if len(temp_split_message) <= 2:
                                     pass
@@ -241,6 +272,7 @@ if __name__ == '__main__':
     irc = IRC()
     irc.init()
     bot = Bot()
+    bot.init()
 
     # Shorten function calls and create instance
     _funcdiagnose = _functions.diagnostic(irc, bot.sqlconn)
