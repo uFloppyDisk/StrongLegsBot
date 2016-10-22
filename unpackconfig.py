@@ -1,7 +1,7 @@
-import ConfigParser
+import configparser
 import logging
 
-cfg = ConfigParser.ConfigParser(allow_no_value=True)
+cfg = configparser.ConfigParser(allow_no_value=True)
 
 
 class configUnpacker:
@@ -29,4 +29,4 @@ if __name__ == "__main__":
     print("       UnpackConfig.py        ")
     print("     By: Pawel Bartusiak      ")
     print("    Don't pirate this guy     ")
-    raw_input('Yes guy? (Y/N): ')
+    input('Yes guy? (Y/N): ')

@@ -579,7 +579,7 @@ class data:
                         userlevel = 400
                     logging.debug('Done checking non-special user')
 
-                elif usertype in dictUserType.keys():
+                elif usertype in list(dictUserType.keys()):
                     logging.debug('Checking special user')
                     userlevel = dictUserType[usertype]
                     logging.debug('Done checking special user')
@@ -615,7 +615,7 @@ class data:
                         userlevel = 50
                     logging.debug('Done checking non-special user')
 
-                elif usertype in dictUserType.keys():
+                elif usertype in list(dictUserType.keys()):
                     logging.debug('Checking special user')
                     userlevel = dictUserType[usertype]
                     logging.debug('Done checking special user')
@@ -639,7 +639,7 @@ class data:
             info["privmsg"] = message
 
         userlevel = info["userlevel"]
-        info["help"] = info.keys()
+        info["help"] = list(info.keys())
         split_message = message.split(" ")
         info["arg1"] = "nil" if (len(split_message) - 1) < 1 else split_message[1]
         info["arg2"] = "nil" if (len(split_message) - 1) < 2 else split_message[2]
@@ -654,7 +654,7 @@ class data:
                 userlevel = 0
 
         temp_message_split = message.split(" ", 1)
-        if temp_message_split[0] in default_commands.dispatch_map.keys():
+        if temp_message_split[0] in list(default_commands.dispatch_map.keys()):
             default_commands.dispatch_map[temp_message_split[0]](self.irc, self.sqlconn, info, userlevel)
             return
 

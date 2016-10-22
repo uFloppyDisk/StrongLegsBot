@@ -1,8 +1,8 @@
-from commands import Commands
+from .commands import Commands
 
-from regulars import regulars
+from .regulars import regulars
 
-from faq import faq
+from .faq import faq
 
 dispatch_naming = {'commands': '$commands', 'regulars': '$regulars',
                    'filters': '$filters', 'faq': '$faq'}

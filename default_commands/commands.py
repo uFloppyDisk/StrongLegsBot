@@ -58,7 +58,7 @@ class Commands:
         command_string = ''
 
         for entry in sqlCursorOffload:
-            if entry[0] not in command_dict.keys():
+            if entry[0] not in list(command_dict.keys()):
                 command_dict[entry[0]] = []
 
             command_dict[entry[0]].append(entry[1])
@@ -68,7 +68,7 @@ class Commands:
                                   "(%s)" % (self.irc.CHANNEL, self.userlevel), self.info['username'])
             return
 
-        for key in sorted(command_dict.keys(), reverse=True):
+        for key in sorted(list(command_dict.keys()), reverse=True):
             command_string += ("%s: %s | " % (key, ", ".join(sorted(command_dict[key]))))
 
         whisper_string = 'Custom commands in channel %s, available with your userlevel (%s), are: %s'\

@@ -25,8 +25,8 @@ class timer:
         self.test_timer.cancel()
 
 if __name__ == "__main__":
-    timer_name = raw_input('Test timer name: ')
-    timer_privmsg = raw_input('Test timer message: ')
-    timer_delay = raw_input('Test timer delay(secs): ')
+    timer_name = input('Test timer name: ')
+    timer_privmsg = input('Test timer message: ')
+    timer_delay = input('Test timer delay(secs): ')
     while True:
         pass

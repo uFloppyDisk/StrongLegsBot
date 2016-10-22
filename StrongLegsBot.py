@@ -35,18 +35,18 @@ class IRC:
         try:
             sock.connect((self.HOST, self.PORT))
             sock.settimeout(0.01)
-            sock.send('CAP REQ :twitch.tv/membership\r\n')
-            sock.send('CAP REQ :twitch.tv/tags\r\n')
-            sock.send('CAP REQ :twitch.tv/commands\r\n')
-            sock.send('PASS %s\r\n' % self.PASSWORD)
-            sock.send('NICK %s\r\n' % self.USERNAME)
-            sock.send('JOIN %s\r\n' % self.CHANNEL)
+            self.send_raw('CAP REQ :twitch.tv/membership\r\n')
+            self.send_raw('CAP REQ :twitch.tv/tags\r\n')
+            self.send_raw('CAP REQ :twitch.tv/commands\r\n')
+            self.send_raw('PASS %s\r\n' % self.PASSWORD)
+            self.send_raw('NICK %s\r\n' % self.USERNAME)
+            self.send_raw('JOIN %s\r\n' % self.CHANNEL)
         except Exception as ERR_exception:
             logging.critical(ERR_exception)
 
     # Send raw message to Twitch
     def send_raw(self, output):
-        sock.send(output.format(channel=self.CHANNEL))
+        sock.send(output.format(channel=self.CHANNEL).encode("UTF-8"))
 
     def send_privmsg(self, output, me=False):
         me = '/me : ' if me else ''
@@ -54,27 +54,27 @@ class IRC:
         formatted_output = "%s%s{output}\r\n"\
                            .format(output=output) % (me, custom)
 
-        sock.send(self.privmsg_str + formatted_output)
+        self.send_raw(self.privmsg_str + formatted_output)
         logging.info("[PRIVMSG] :| [SENT] %s: %s", self.CHANNEL, formatted_output.strip("\r\n"))
 
     def send_timeout(self, output, target, duration):
         custom = self.custom if self.custom else ''
-        sock.send(self.privmsg_str + '.timeout {target} {duration} %s{reason}\r\n'
-                  .format(target=target,
-                          duration=duration,
-                          reason=output)) % custom
+        self.send_raw(self.privmsg_str + '.timeout {target} {duration} %s{reason}\r\n'
+                      .format(target=target,
+                              duration=duration,
+                              reason=output)) % custom
 
     def send_ban(self, output, target):
         custom = self.custom if self.custom else ''
-        sock.send(self.privmsg_str + '.ban {target} %s{reason}\r\n'
-                  .format(target=target,
-                          reason=output)) % custom
+        self.send_raw(self.privmsg_str + '.ban {target} %s{reason}\r\n'
+                      .format(target=target,
+                              reason=output)) % custom
 
     def send_whisper(self, output, target):
         custom = self.custom if self.custom else ''
         formatted_output = ".w {target} %s{output}\r\n"\
                            .format(output=output, target=target) % custom
-        sock.send(self.privmsg_str + formatted_output)
+        self.send_raw(self.privmsg_str + formatted_output)
         logging.info("[WHISPER] :| [SENT] %s: %s" % (self.CHANNEL, formatted_output.strip("\r\n")))
 
 
@@ -123,7 +123,7 @@ class Bot:
             try:
                 try:
                     # Attempts a data grab from twitch
-                    self.data = sock.recv(1024)
+                    self.data = sock.recv(1024).decode("UTF-8")
                     self.databuffer = self.databuffer + self.data  # Appends data received to buffer
                     self.temp = self.databuffer.rsplit('\n')  # Splits buffer into list
                     self.databuffer = self.temp.pop()  # Grabs the last list item and assigns to buffer
