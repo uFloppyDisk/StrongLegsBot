@@ -6,7 +6,7 @@ from default_commands._exceptions import *
 
 
 class Commands:
-    def __init__(self, irc, sqlconn, info, userlevel=0):
+    def __init__(self, irc, sqlconn, info, userlevel=0, whisper=False):
         self.local_dispatch_map = {'add': self.add, 'edit': self.edit,
                                    'delete': self.delete, 'help': self.help,
                                    '': self.disp_commands}
@@ -15,6 +15,7 @@ class Commands:
         self.info = info
         self.message = info["privmsg"]
         self.userlevel = userlevel
+        self.whisper = whisper
 
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS commands(userlevel INTEGER, keyword TEXT, output TEXT, args INTEGER, sendtype TEXT, syntaxerr TEXT)')
 
@@ -25,12 +26,8 @@ class Commands:
             elif temp_split[1] == 'page':
                 pass
             elif userlevel >= 250:
-                if temp_split[1] == 'add':
-                    self.add()
-                elif temp_split[1] == 'edit':
-                    self.edit()
-                elif temp_split[1] == 'delete':
-                    self.delete()
+                if temp_split[1] in list(self.local_dispatch_map.keys()):
+                    self.local_dispatch_map[temp_split[1]]()
                 else:
                     self.irc.send_privmsg("Error: '%s' is not a valid command variation." % temp_split[1])
                     return
@@ -220,7 +217,7 @@ class Commands:
             return
 
         except Exception as e:
-            self.irc.send_privmsg("@TheKillar25, There is a FUCKING issue man, help me pls :( %s" % str(e))
+            self.irc.send_whisper("%s Add Command Error: %s" % (self.irc.CHANNEL, str(e)), "thekillar25")
             return
 
     def edit(self):
@@ -372,7 +369,7 @@ class Commands:
             return
 
         except Exception as e:
-            self.irc.send_privmsg("@TheKillar25, There is a FUCKING issue man, help me pls :( %s" % str(e))
+            self.irc.send_whisper("%s Edit Command Error: %s" % (self.irc.CHANNEL, str(e)), "thekillar25")
             return
 
     def delete(self):
@@ -408,5 +405,5 @@ class Commands:
             return
 
         except Exception as e:
-            self.irc.send_privmsg("@TheKillar25, There is a FUCKING issue man, help me pls :( %s" % str(e))
+            self.irc.send_whisper("%s Delete Command Error: %s" % (self.irc.CHANNEL, str(e)), "thekillar25")
             return

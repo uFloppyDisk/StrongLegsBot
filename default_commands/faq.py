@@ -5,7 +5,7 @@ from default_commands._exceptions import *
 
 
 class faq:
-    def __init__(self, irc, sqlconn, info, userlevel=0):
+    def __init__(self, irc, sqlconn, info, userlevel=0, whisper=False):
         self.local_dispatch_map = {'add': self.add, 'edit': self.edit,
                                    'delete': self.delete, 'help': self.help,
                                    '': ''}
@@ -14,6 +14,7 @@ class faq:
         self.info = info
         self.message = info["privmsg"]
         self.userlevel = userlevel
+        self.whisper = whisper
 
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS faq(userlevel INTEGER, name TEXT, regexp TEXT, output TEXT, sendtype TEXT)')
 
@@ -22,12 +23,8 @@ class faq:
             if temp_split[1] == 'help':
                 self.help()
             elif userlevel >= 400:
-                if temp_split[1] == 'add':
-                    self.add()
-                elif temp_split[1] == 'edit':
-                    self.edit()
-                elif temp_split[1] == 'delete':
-                    self.delete()
+                if temp_split[1] in list(self.local_dispatch_map.keys()):
+                    self.local_dispatch_map[temp_split[1]]()
                 else:
                     self.irc.send_privmsg("Error: '%s' is not a valid command variation." % temp_split[1])
                     return

@@ -4,7 +4,7 @@ import default_commands
 
 
 class regulars:
-    def __init__(self, irc, sqlconn, info, userlevel=0):
+    def __init__(self, irc, sqlconn, info, userlevel=0, whisper=False):
         self.local_dispatch_map = {'add': self.add, 'delete': self.delete, 'help': '',
                                    '': ''}
         self.irc = irc
@@ -12,16 +12,18 @@ class regulars:
         self.info = info
         self.message = info["privmsg"]
         self.userlevel = userlevel
+        self.whisper = whisper
 
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS regulars(userid INTEGER, username TEXT)')
 
         temp_split = self.message.split(' ')
         if len(temp_split) > 1:
             if userlevel >= 250:
-                if temp_split[1] == 'add':
-                    self.add()
-                elif temp_split[1] == 'delete':
-                    self.delete()
+                if temp_split[1] in list(self.local_dispatch_map.keys()):
+                    self.local_dispatch_map[temp_split[1]]()
+                else:
+                    self.irc.send_privmsg("Error: '%s' is not a valid command variation." % temp_split[1])
+                    return
             else:
                 self.irc.send_privmsg('Error: You are not allowed to use any variations of {command}.'
                                       .format(command=default_commands.dispatch_naming['regulars']))

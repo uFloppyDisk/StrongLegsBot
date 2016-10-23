@@ -655,7 +655,8 @@ class data:
 
         temp_message_split = message.split(" ", 1)
         if temp_message_split[0] in list(default_commands.dispatch_map.keys()):
-            default_commands.dispatch_map[temp_message_split[0]](self.irc, self.sqlconn, info, userlevel)
+            default_commands.dispatch_map[temp_message_split[0]](self.irc, self.sqlconn, info,
+                                                                 userlevel=userlevel, whisper=whisperaccess)
             return
 
         self.sqlCursorChannel.execute('SELECT * FROM commands WHERE userlevel <= ?',

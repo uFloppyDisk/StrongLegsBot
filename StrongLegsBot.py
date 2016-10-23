@@ -85,8 +85,10 @@ class Bot:
         self.data = "."
         self.databuffer = ''
         self.temp = ''
-        self.startmark = 0
-        self.endmark = 0
+        self.currentdatetime = 0
+        self.currentdatetimelist = []
+        self.olddatetime = 0
+        self.olddatetimelist = []
         self.startmarkloop = 0
         self.endmarkloop = 0
         self.previous_line = None
@@ -100,7 +102,11 @@ class Bot:
         self.ignoredusersread = None
         self.ignoredusers = None
 
+        self.birthdayusers = {}
+
     def init(self):
+        self.currentdatetime = time.gmtime(time.time())
+        self.olddatetime = time.gmtime(time.time())
         self.ignoredusersfile = open('ignoredusers.txt', 'r')
         self.ignoredusersread = self.ignoredusersfile.readlines()
         self.ignoredusers = [username.strip('\n').strip('\r') for username in self.ignoredusersread]
@@ -109,14 +115,55 @@ class Bot:
             self.sqlConnectionChannel = sql.connect('SLB.sqlDatabase/{}DB.db'
                                                     .format(IRC().CHANNEL.strip("#")))
         else:
-            self.sqlConnectionChannel = sql.connect(os.path.dirname(os.path.abspath(__file__)) + '\SLB.sqlDatabase\{}DB.db'
+            self.sqlConnectionChannel = sql.connect(os.path.dirname(os.path.abspath(__file__)) +
+                                                    '\SLB.sqlDatabase\{}DB.db'
                                                     .format(IRC().CHANNEL.strip("#").strip("\n")))
 
         self.sqlCursorChannel = self.sqlConnectionChannel.cursor()
-
         self.sqlconn = (self.sqlConnectionChannel, self.sqlCursorChannel)
 
-        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS config(variable TEXT, value TEXT, args TEXT)')
+        self.sqlCursorChannel.execute(
+            'CREATE TABLE IF NOT EXISTS birthdays(userid TEXT, username TEXT, displayname TEXT, date TEXT)'
+        )
+        self.sqlCursorChannel.execute(
+            'CREATE TABLE IF NOT EXISTS config(variable TEXT, value TEXT, args TEXT)'
+        )
+
+        self.olddatetimelist = [int(self.olddatetime[index]) for index in range(0, 6)]
+        self.currentdatetimelist = [int(self.currentdatetime[index]) for index in range(0, 6)]
+
+        self.getbirthdayusers()
+        return
+
+    def getbirthdayusers(self):
+        self.sqlCursorChannel.execute("SELECT * FROM birthdays WHERE date LIKE ?",
+                                      ('{}%'.format("%s/%s" % (self.currentdatetimelist[2],
+                                                               self.currentdatetimelist[1])),))
+        sqlCursorOffload = self.sqlCursorChannel.fetchall()
+
+        if sqlCursorOffload:
+            for entry in sqlCursorOffload:
+                username = entry[1]
+                displayname = entry[2]
+                temp_age = ""
+                temp_split_date = entry[3].split("/")
+                if len(temp_split_date) == 3:
+                    def ordinal(n):
+                        return "%d%s" % (n, "tsnrhtdd"[(n // 10 % 10 != 1) *
+                                                       (n % 10 < 4) * n % 10::4])
+
+                    temp_birthyear = int(temp_split_date[2])
+                    temp_age = (self.currentdatetimelist[0] - temp_birthyear)
+                    temp_age = ordinal(temp_age)
+
+                self.birthdayusers[username] = (displayname, temp_age)
+
+        else:
+            pass
+
+        logging.info("[_BOTCOM] :| [CVAR] Birthday users: %s" % list(self.birthdayusers.keys()))
+
+        return
 
     def main(self):
         while not self.mainloopbreak:
@@ -136,9 +183,21 @@ class Bot:
                     _funcdiagnose.bot_restart("Lost connection with Twitch IRC server", user_loggingchoice)
 
                 # Captures current time for response time measuring
-                if self.temp != []:
+                if self.temp:
+                    self.olddatetime = self.currentdatetime
+                    self.olddatetimelist = list(map(int, self.olddatetime))
+                    self.currentdatetime = time.gmtime(time.time())
+                    self.currentdatetimelist = list(map(int, self.currentdatetime))
+
                     self.startmarkloop = time.time()
                     logging.debug("START MARK")
+
+                    if (self.currentdatetimelist[2] - self.olddatetimelist[2]) != 0:
+                        self.getbirthdayusers()
+                        return
+
+                else:
+                    continue
 
                 # Loop for dealing with each item separately
                 for line in self.temp:
@@ -162,6 +221,17 @@ class Bot:
                         pingstring = info[1]
                         pingstring = pingstring.replace(":", "").strip("\r")
                         irc.send_raw("PONG%s\r\n" % pingstring)
+
+                    if identifier == "JOIN":
+                        if info["username"] in list(self.birthdayusers.keys()):
+                            irc.send_privmsg("Birthday Boy/Girl %s has joined the chat!"
+                                             " Wish them a happy %s birthday!"
+                                             % (self.birthdayusers[info["username"]][0],
+                                                self.birthdayusers[info["username"]][1]),
+                                             True)
+
+                    if identifier == "PART":
+                        pass
 
                     # Find and deal with user chat messages, majority of activity occurs here
                     if identifier == "privmsg":
@@ -230,8 +300,7 @@ class Bot:
                             if temp_split_message[0] == '$stop':
                                 if len(temp_split_message) == 2:
                                     if temp_split_message[1] in ('all', irc.CHANNEL):
-                                        self.mainloopbreak = True
-                                        break
+                                        raise KeyboardInterrupt
                                 elif len(temp_split_message) > 2:
                                     if temp_split_message[1] in ('all', irc.CHANNEL):
                                         if temp_split_message[2] in ('/me', '.me'):
@@ -239,8 +308,7 @@ class Bot:
                                         else:
                                             irc.send_privmsg(" ".join(temp_split_message[2:]))
 
-                                        self.mainloopbreak = True
-                                        break
+                                        raise KeyboardInterrupt
 
                             if temp_split_message[0] == '$send' and userlevel >= 400:
                                 if len(temp_split_message) <= 2:
@@ -268,16 +336,6 @@ class Bot:
 
 
 if __name__ == '__main__':
-    # Create instances of each class in StrongLegsBot and initialize IRC conn
-    irc = IRC()
-    irc.init()
-    bot = Bot()
-    bot.init()
-
-    # Shorten function calls and create instance
-    _funcdiagnose = _functions.diagnostic(irc, bot.sqlconn)
-    _funcdata = _functions.data(irc, bot.sqlconn)
-
     logging_levels = {'debug': logging.DEBUG, 'info': logging.INFO,
                       'warning': logging.WARNING, 'error': logging.ERROR,
                       'critical': logging.CRITICAL}
@@ -296,6 +354,16 @@ if __name__ == '__main__':
     # Set logging formatting default
     logging.basicConfig(format='<%(asctime)s> %(filename)s:%(levelname)s:%(lineno)s: %(message)s',
                         level=logging_level)
+
+    # Create instances of each class in StrongLegsBot and initialize IRC conn
+    irc = IRC()
+    irc.init()
+    bot = Bot()
+    bot.init()
+
+    # Shorten function calls and create instance
+    _funcdiagnose = _functions.diagnostic(irc, bot.sqlconn)
+    _funcdata = _functions.data(irc, bot.sqlconn)
 
     bot.main()
     sys.exit("Main loop exited")
