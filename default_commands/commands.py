@@ -1,3 +1,19 @@
+"""
+Copyright 2016 Pawel Bartusiak
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import logging
 import re
 
@@ -5,7 +21,7 @@ import default_commands
 from default_commands._exceptions import *
 
 
-class Commands:
+class commands:
     def __init__(self, irc, sqlconn, info, userlevel=0, whisper=False):
         self.local_dispatch_map = {'add': self.add, 'edit': self.edit,
                                    'delete': self.delete, 'help': self.help,
@@ -16,8 +32,6 @@ class Commands:
         self.message = info["privmsg"]
         self.userlevel = userlevel
         self.whisper = whisper
-
-        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS commands(userlevel INTEGER, keyword TEXT, output TEXT, args INTEGER, sendtype TEXT, syntaxerr TEXT)')
 
         temp_split = self.message.split(' ')
         if len(temp_split) > 1:

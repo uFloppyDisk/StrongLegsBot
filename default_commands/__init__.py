@@ -1,22 +1,41 @@
-from .birthdays import birthdays
-from .commands import Commands
-from .faq import faq
-from .regulars import regulars
+"""
+Copyright 2016 Pawel Bartusiak
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+from . import birthdays
+from . import commands
+from . import config
+from . import faq
+from . import regulars
 
 
 dispatch_naming = {
     'birthdays': '$birthdays',
     'commands': '$commands',
+    'config': '$config',
     'faq': '$faq',
     'filters': '$filters',
     'regulars': '$regulars',
 }
 
 dispatch_map = {
-    dispatch_naming['birthdays']: birthdays,
-    dispatch_naming['commands']: Commands,
-    dispatch_naming['faq']: faq,
-    dispatch_naming['regulars']: regulars,
+    dispatch_naming['birthdays']: birthdays.birthdays,
+    dispatch_naming['commands']: commands.commands,
+    dispatch_naming['config']: config.config,
+    dispatch_naming['faq']: faq.faq,
+    dispatch_naming['regulars']: regulars.regulars,
 }
 
 help_defaults = {

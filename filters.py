@@ -1,3 +1,19 @@
+"""
+Copyright 2016 Pawel Bartusiak
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import logging
 import re
 
@@ -12,58 +28,8 @@ class filters:
         self.sqlConnectionChannel, self.sqlCursorChannel = self.sqlconn
         self.info = info
 
-        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS filters'
-                                      '(filtertype TEXT, enabled TEXT, maxuserlevel INTEGER, first_timeout INTEGER, '
-                                      'second_timeout INTEGER, third_timeout INTEGER, ban_after_third TEXT, message TEXT)')
-        self.sqlConnectionChannel.commit()
-
-        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS offenses'
-                                      '(userid INTEGER, username TEXT, offenses INTEGER)')
-        self.sqlConnectionChannel.commit()
-
         self.sqlCursorChannel.execute('SELECT filtertype FROM filters')
         self.sqlCursorOffload = self.sqlCursorChannel.fetchall()
-
-        lstFiltertypes = ['link', 'spam', 'emote_spam', 'banphrases']
-        if len(lstFiltertypes) > len(self.sqlCursorOffload):
-            for filtertype in lstFiltertypes:
-                lstHits = []
-                for x in range(len(self.sqlCursorOffload)):
-                    if filtertype not in self.sqlCursorOffload[x]:
-                        lstHits.append(0)
-                    else:
-                        lstHits.append(1)
-                        break
-
-                else:
-                    if 1 not in lstHits:
-                        logging.warning("%s not found in sql database" % filtertype)
-                        del lstHits
-                        self.sqlCursorChannel.execute('INSERT INTO filters (filtertype, enabled) VALUES (?, ?)',
-                                                      (filtertype, "false"))
-                        self.sqlConnectionChannel.commit()
-
-        # try:
-        self.sqlCursorChannel.execute('SELECT * FROM filters')
-        self.sqlCursorOffload = self.sqlCursorChannel.fetchall()
-
-        dictColumns = {0: "maxuserlevel", 1: "first_timeout",
-                       2: "second_timeout", 3: "third_timeout",
-                       4: "ban_after_third", 5: "message"}
-
-        dictDefaults = {"maxuserlevel": 150, "first_timeout": 10,
-                        "second_timeout": 600, "third_timeout": 600,
-                        "ban_after_third": "false", "message": "None"}
-
-        for tuple in self.sqlCursorOffload:
-            if None in tuple or '' in tuple:
-                x = -2
-                for column in tuple:
-                    if (column is None or column is '') and x >= 0:
-                        self.sqlCursorChannel.execute('UPDATE filters SET {} = ?'.format(dictColumns[x]),
-                                                      (dictDefaults[dictColumns[x]],))
-                        self.sqlConnectionChannel.commit()
-                    x += 1
 
         self.sqlCursorChannel.execute('SELECT * FROM offenses WHERE userid == ?',
                                       (self.info["user-id"],))

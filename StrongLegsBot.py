@@ -1,3 +1,19 @@
+"""
+Copyright 2016 Pawel Bartusiak
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import logging
 import os
 import time
@@ -5,8 +21,9 @@ import socket
 import sqlite3 as sql
 import sys
 
+from constants import ConfigDefaults
+import default_commands
 import _functions
-import filters
 import _reloadbot
 import unpackconfig
 
@@ -98,6 +115,8 @@ class Bot:
         self.sqlCursorChannel = None
         self.sqlconn = None
 
+        self.configdefaults = None
+
         self.ignoredusersfile = None
         self.ignoredusersread = None
         self.ignoredusers = None
@@ -126,42 +145,35 @@ class Bot:
             'CREATE TABLE IF NOT EXISTS birthdays(userid TEXT, username TEXT, displayname TEXT, date TEXT)'
         )
         self.sqlCursorChannel.execute(
-            'CREATE TABLE IF NOT EXISTS config(variable TEXT, value TEXT, args TEXT)'
+            'CREATE TABLE IF NOT EXISTS commands(userlevel INTEGER, keyword TEXT, output TEXT, args INTEGER, sendtype TEXT, syntaxerr TEXT)'
         )
+        self.sqlCursorChannel.execute(
+            'CREATE TABLE IF NOT EXISTS config(grouping TEXT, variable TEXT, value TEXT, args TEXT, userlevel INTEGER)'
+        )
+        self.sqlCursorChannel.execute(
+            'CREATE TABLE IF NOT EXISTS faq(userlevel INTEGER, name TEXT, regexp TEXT, output TEXT, sendtype TEXT)'
+        )
+        self.sqlCursorChannel.execute(
+            'CREATE TABLE IF NOT EXISTS filters'
+            '(filtertype TEXT, enabled TEXT, maxuserlevel INTEGER, first_timeout INTEGER, '
+            'second_timeout INTEGER, third_timeout INTEGER, ban_after_third TEXT, message TEXT)'
+        )
+        self.sqlCursorChannel.execute(
+            'CREATE TABLE IF NOT EXISTS regulars(userid INTEGER, username TEXT)'
+        )
+
+        self.sqlConnectionChannel.commit()
+
+        ConfigDefaults(self.sqlconn).all_(1)
+
+        self.configdefaults = ConfigDefaults(self.sqlconn)
 
         self.olddatetimelist = [int(self.olddatetime[index]) for index in range(0, 6)]
         self.currentdatetimelist = [int(self.currentdatetime[index]) for index in range(0, 6)]
 
-        self.getbirthdayusers()
-        return
-
-    def getbirthdayusers(self):
-        self.sqlCursorChannel.execute("SELECT * FROM birthdays WHERE date LIKE ?",
-                                      ('{}%'.format("%s/%s" % (self.currentdatetimelist[2],
-                                                               self.currentdatetimelist[1])),))
-        sqlCursorOffload = self.sqlCursorChannel.fetchall()
-
-        if sqlCursorOffload:
-            for entry in sqlCursorOffload:
-                username = entry[1]
-                displayname = entry[2]
-                temp_age = ""
-                temp_split_date = entry[3].split("/")
-                if len(temp_split_date) == 3:
-                    def ordinal(n):
-                        return "%d%s" % (n, "tsnrhtdd"[(n // 10 % 10 != 1) *
-                                                       (n % 10 < 4) * n % 10::4])
-
-                    temp_birthyear = int(temp_split_date[2])
-                    temp_age = (self.currentdatetimelist[0] - temp_birthyear)
-                    temp_age = ordinal(temp_age)
-
-                self.birthdayusers[username] = (displayname, temp_age)
-
-        else:
-            pass
-
-        logging.info("[_BOTCOM] :| [CVAR] Birthday users: %s" % list(self.birthdayusers.keys()))
+        self.birthdayusers = default_commands.birthdays.getbirthdayusers(self.sqlconn,
+                                                                         self.configdefaults,
+                                                                         self.currentdatetimelist)
 
         return
 
@@ -192,8 +204,10 @@ class Bot:
                     self.startmarkloop = time.time()
                     logging.debug("START MARK")
 
-                    if (self.currentdatetimelist[2] - self.olddatetimelist[2]) != 0:
-                        self.getbirthdayusers()
+                    if self.currentdatetimelist[2] - self.olddatetimelist[2]:
+                        self.birthdayusers = default_commands.birthdays.getbirthdayusers(self.sqlconn,
+                                                                                         self.configdefaults,
+                                                                                         self.currentdatetimelist)
                         return
 
                 else:
@@ -223,12 +237,8 @@ class Bot:
                         irc.send_raw("PONG%s\r\n" % pingstring)
 
                     if identifier == "JOIN":
-                        if info["username"] in list(self.birthdayusers.keys()):
-                            irc.send_privmsg("Birthday Boy/Girl %s has joined the chat!"
-                                             " Wish them a happy %s birthday!"
-                                             % (self.birthdayusers[info["username"]][0],
-                                                self.birthdayusers[info["username"]][1]),
-                                             True)
+                        default_commands.birthdays.joinevent(irc, self.configdefaults,
+                                                             self.birthdayusers, info["username"])
 
                     if identifier == "PART":
                         pass
@@ -254,9 +264,9 @@ class Bot:
                         info["userlevel"] = userlevel
 
                         # Passes user through filters if permission level is under 250
-                        if userlevel < 250:
-                            if filters.filters(irc, self.sqlconn, info).linkprotection():
-                                continue  # If one of the filters return True, the user is omitted
+                        # if userlevel < 250:
+                        #     if filters.filters(irc, self.sqlconn, info).linkprotection():
+                        #         continue  # If one of the filters return True, the user is omitted
 
                         # -=-=-=-=-=-=-= Non-restricted users past this point =-=-=-=-=-=-=-
 
@@ -301,6 +311,7 @@ class Bot:
                                 if len(temp_split_message) == 2:
                                     if temp_split_message[1] in ('all', irc.CHANNEL):
                                         raise KeyboardInterrupt
+
                                 elif len(temp_split_message) > 2:
                                     if temp_split_message[1] in ('all', irc.CHANNEL):
                                         if temp_split_message[2] in ('/me', '.me'):
@@ -312,7 +323,7 @@ class Bot:
 
                             if temp_split_message[0] == '$send' and userlevel >= 400:
                                 if len(temp_split_message) <= 2:
-                                    pass
+                                    irc.send_whisper("Error: Not enough arguments.", info["username"])
 
                                 if len(temp_split_message) > 2:
                                     if temp_split_message[1] == irc.CHANNEL or \
@@ -331,7 +342,7 @@ class Bot:
                                       ((self.endmarkloop - self.startmarkloop) * 1000))
 
             except KeyboardInterrupt:
-                logging.critical('Process Interrupted')
+                logging.critical('Process Interrupted by KeyboardInterrupt')
                 self.mainloopbreak = True
 
 
@@ -366,4 +377,4 @@ if __name__ == '__main__':
     _funcdata = _functions.data(irc, bot.sqlconn)
 
     bot.main()
-    sys.exit("Main loop exited")
+    sys.exit("Bot running in channel %s stopped." % irc.CHANNEL)

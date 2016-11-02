@@ -1,4 +1,23 @@
+"""
+Copyright 2016 Pawel Bartusiak
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+import logging
 import re
+
+from constants import ConfigDefaults
 import default_commands
 from default_commands._exceptions import *
 
@@ -12,25 +31,29 @@ class birthdays:
         self.info = info
         self.userlevel = userlevel
         self.whisper = whisper
-
         self.message = info["privmsg"]
 
-        temp_split = self.message.split(" ")
-        if len(temp_split) > 1:
-            if self.info["userlevel"] >= 150:
-                if temp_split[1]:
-                    self.local_dispatch_map['']()
-                else:
-                    raise DCBirthdaysFormatError
-            else:
-                raise DCUserlevelIncorrectError
+        self.configdefaults = ConfigDefaults(sqlconn)
 
-        else:
-            self.irc.send_whisper("Error: Usage '{help}'".format(
-                help=default_commands.help_defaults[default_commands.dispatch_naming['birthdays']]['']
-                    .format(command=default_commands.dispatch_naming['birthdays'])
-            ), self.info["username"])
-            return
+        self.enabled = bool(self.configdefaults.sqlSelectValueString("birthdays", "enabled").fetchone()[0])
+
+        temp_split = self.message.split(" ")
+        if self.enabled:
+            if len(temp_split) > 1:
+                if self.info["userlevel"] >= 150:
+                    if temp_split[1]:
+                        self.local_dispatch_map['']()
+                    else:
+                        raise DCBirthdaysFormatError
+                else:
+                    raise DCUserlevelIncorrectError
+
+            else:
+                self.irc.send_whisper("Error: Usage '{help}'".format(
+                    help=default_commands.help_defaults[default_commands.dispatch_naming['birthdays']]['']
+                        .format(command=default_commands.dispatch_naming['birthdays'])
+                ), self.info["username"])
+                return
 
     def addtodb(self):
         try:
@@ -101,3 +124,49 @@ class birthdays:
 
             self.irc.send_whisper("%s Add Birthday Error: %s" % (self.irc.CHANNEL, str(e)), "thekillar25")
             return
+
+
+def getbirthdayusers(sqlconn, configdefaults, currentdatetimelist):
+    if int(configdefaults.sqlSelectValueString("birthdays", "enabled").fetchone()[0]):
+        sqlConnectionChannel, sqlCursorChannel = sqlconn
+        birthdayusers = {}
+        sqlCursorChannel.execute("SELECT * FROM birthdays WHERE date LIKE ?",
+                                 ('{}%'.format("%s/%s" % (currentdatetimelist[2],
+                                                          currentdatetimelist[1])),))
+        sqlCursorOffload = sqlCursorChannel.fetchall()
+
+        if sqlCursorOffload:
+            for entry in sqlCursorOffload:
+                username = entry[1]
+                displayname = entry[2]
+                temp_age = ""
+                temp_split_date = entry[3].split("/")
+                if len(temp_split_date) == 3:
+                    def ordinal(n):
+                        return "%d%s" % (n, "tsnrhtdd"[(n // 10 % 10 != 1) *
+                                                       (n % 10 < 4) * n % 10::4])
+
+                    temp_birthyear = int(temp_split_date[2])
+                    temp_age = (currentdatetimelist[0] - temp_birthyear)
+                    temp_age = ordinal(temp_age)
+
+                birthdayusers[username] = (displayname, temp_age)
+
+        else:
+            pass
+
+        logging.info("[_BOTCOM] :| [CVAR] Birthday users: %s" % list(birthdayusers.keys()))
+
+        return birthdayusers
+
+    return {}
+
+
+def joinevent(irc, configdefaults, birthdayusers, username):
+    if username in list(birthdayusers.keys()) and \
+            bool(configdefaults.sqlSelectValueString("birthdays", "enabled").fetchone()[0]):
+        irc.send_privmsg("Birthday Boy/Girl %s has joined the chat!"
+                         " Wish them a happy %s birthday!"
+                         % (birthdayusers[username][0],
+                            birthdayusers[username][1]),
+                         True)
