@@ -17,6 +17,7 @@ limitations under the License.
 from . import birthdays
 from . import commands
 from . import config
+from . import constants
 from . import faq
 from . import regulars
 
