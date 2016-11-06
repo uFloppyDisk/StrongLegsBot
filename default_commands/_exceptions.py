@@ -48,12 +48,17 @@ class DCUserlevelIncorrectError(DCError):
 
 
 class DCDatabaseEntryExists(DCError):
-    """Exception for existing entry(s) matching new entry"""
+    """Exception for existing entry(s) matching new entry."""
     pass
 
 
 class DCDatabaseEntryDoesNotExist(DCError):
-    """Exception for missing database entries"""
+    """Exception for missing database entries."""
+    pass
+
+
+class DCIntegerOutOfBounds(DCError):
+    """Exception for integer out of set bounds."""
     pass
 
 # endregion

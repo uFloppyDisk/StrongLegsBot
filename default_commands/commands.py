@@ -17,6 +17,7 @@ limitations under the License.
 import logging
 import re
 
+from constants import ConfigDefaults, boolean
 import default_commands
 from default_commands._exceptions import *
 
@@ -32,25 +33,40 @@ class commands:
         self.message = info["privmsg"]
         self.userlevel = userlevel
         self.whisper = whisper
+        self.sqlVariableString = "SELECT value FROM config WHERE grouping=? AND variable=?"
+
+        self.configdefaults = ConfigDefaults(sqlconn)
+
+        self.enabled = boolean(self.configdefaults.sqlExecute(
+            self.sqlVariableString, ("commands", "enabled")).fetchone()[0])
+
+        if not self.enabled:
+            return
+
+        self.min_userlevel = int(self.configdefaults.sqlExecute(
+            self.sqlVariableString, ("commands", "min_userlevel")).fetchone()[0])
+        self.min_userlevel_edit = int(self.configdefaults.sqlExecute(
+            self.sqlVariableString, ("commands", "min_userlevel_edit")).fetchone()[0])
 
         temp_split = self.message.split(' ')
-        if len(temp_split) > 1:
-            if temp_split[1] == 'help':
-                self.help()
-            elif temp_split[1] == 'page':
-                pass
-            elif userlevel >= 250:
-                if temp_split[1] in list(self.local_dispatch_map.keys()):
-                    self.local_dispatch_map[temp_split[1]]()
+        if userlevel >= self.min_userlevel:
+            if len(temp_split) > 1:
+                if temp_split[1] == 'help':
+                    self.help()
+                elif temp_split[1] == 'page':
+                    pass
+                elif userlevel >= self.min_userlevel_edit:
+                    if temp_split[1] in list(self.local_dispatch_map.keys()):
+                        self.local_dispatch_map[temp_split[1]]()
+                    else:
+                        self.irc.send_privmsg("Error: '%s' is not a valid command variation." % temp_split[1])
+                        return
                 else:
-                    self.irc.send_privmsg("Error: '%s' is not a valid command variation." % temp_split[1])
+                    self.irc.send_privmsg('Error: You are not allowed to use any variations of {command}.'
+                                          .format(command=default_commands.dispatch_naming['commands']))
                     return
             else:
-                self.irc.send_privmsg('Error: You are not allowed to use any variations of {command}.'
-                                      .format(command=default_commands.dispatch_naming['commands']))
-                return
-        else:
-            self.disp_commands()
+                self.disp_commands()
 
     def disp_commands(self):
         self.sqlCursorChannel.execute('SELECT userlevel FROM commands')
@@ -421,3 +437,98 @@ class commands:
         except Exception as e:
             self.irc.send_whisper("%s Delete Command Error: %s" % (self.irc.CHANNEL, str(e)), "thekillar25")
             return
+
+
+def customCommands(irc, sqlconn, info, message=False, whisper=False):
+    # Deal with variables/sql
+    sqlConnectionChannel, sqlCursorChannel = sqlconn
+
+    if message is False:
+        message = info["privmsg"]
+    else:
+        message = message
+
+    if whisper and message is not False:
+        info["privmsg"] = message
+
+    userlevel = info["userlevel"]
+    info["help"] = list(info.keys())
+    split_message = message.split(" ")
+    info["arg1"] = "nil" if (len(split_message) - 1) < 1 else split_message[1]
+    info["arg2"] = "nil" if (len(split_message) - 1) < 2 else split_message[2]
+    info["arg3"] = "nil" if (len(split_message) - 1) < 3 else split_message[3]
+
+    if whisper:
+        sqlCursorChannel.execute('SELECT userlevel FROM userLevel WHERE username == ?', (info['username'],))
+        temp_userlevel = sqlCursorChannel.fetchone()
+        if temp_userlevel is not None:
+            userlevel = temp_userlevel[0]
+        else:
+            userlevel = 0
+
+    temp_message_split = message.split(" ", 1)
+    if temp_message_split[0] in list(default_commands.dispatch_map.keys()):
+        default_commands.dispatch_map[temp_message_split[0]](irc, sqlconn, info,
+                                                             userlevel=userlevel, whisper=whisper)
+        return
+
+    sqlCursorChannel.execute('SELECT * FROM commands WHERE userlevel <= ?',
+                             (userlevel,))
+    sqlCursorOffload = sqlCursorChannel.fetchall()
+
+    # For every command in DB
+    for command in sqlCursorOffload:
+        try:
+            # Checks if user is indeed requesting that command and is above or equal to the required userlevel
+            if split_message[0] == command[1] and userlevel >= command[0]:
+                logging.debug("Command usage request acknowledged")
+                # Check is amount of args given is equal to the required amount
+                if (len(split_message) - 1) == command[3]:
+                    # Tidies command varible
+                    command_output = command[2]
+                    command_sendtype = command[4]
+                    me = False
+
+                    if command_output.startswith('/me') or command_output.startswith('.me'):
+                        me = True
+
+                    # Checks for 1, 2 or 3 args
+                    if command[3] == 1:
+                        info["arg1"] = " ".join(split_message[1:])
+                        command_output = str(command[2]).format(arg1=info['arg1'])
+                    elif command[3] == 2:
+                        info["arg2"] = " ".join(split_message[2:])
+                        command_output = str(command[2]).format(arg1=info['arg1'],
+                                                                arg2=info['arg2'])
+                    elif command[3] == 3:
+                        info["arg3"] = " ".join(split_message[3:])
+                        command_output = str(command[2]).format(arg1=info['arg1'],
+                                                                arg2=info['arg2'],
+                                                                arg3=info['arg3'])
+
+                    if command_sendtype == 'whisper' or whisper:
+                        irc.send_whisper(command_output.format(**info), info['username'])
+                        return
+                    else:
+                        irc.send_privmsg(command_output.format(**info), me)
+                        return
+
+                # Checks if args are required and given are above or below required
+                elif command[3] > 0 and ((len(split_message) - 1) < command[3]
+                                         or (len(split_message) - 1) > command[3]):
+                    if not whisper:
+                        irc.send_privmsg(command[5])
+                    else:
+                        irc.send_whisper(command[5], info['username'])
+
+                return
+
+        except KeyError as err_key:
+            if not whisper:
+                irc.send_privmsg(err_key)
+            else:
+                irc.send_whisper(err_key, info["username"])
+            return
+
+    return
+

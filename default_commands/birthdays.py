@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import datetime
 import logging
 import re
+import time
 
-from constants import ConfigDefaults
+from constants import ConfigDefaults, boolean
 import default_commands
 from default_commands._exceptions import *
 
@@ -33,14 +35,23 @@ class birthdays:
         self.whisper = whisper
         self.message = info["privmsg"]
 
+        self.sqlVariableString = "SELECT value FROM config WHERE grouping=? AND variable=?"
+
         self.configdefaults = ConfigDefaults(sqlconn)
 
-        self.enabled = bool(self.configdefaults.sqlSelectValueString("birthdays", "enabled").fetchone()[0])
+        self.enabled = boolean(self.configdefaults.sqlExecute(
+            self.sqlVariableString, ("birthdays", "enabled")).fetchone()[0])
 
-        temp_split = self.message.split(" ")
-        if self.enabled:
+        if not self.enabled:
+            return
+
+        self.min_userlevel = int(self.configdefaults.sqlExecute(
+            self.sqlVariableString, ("birthdays", "min_userlevel")).fetchone()[0])
+
+        try:
+            temp_split = self.message.split(" ")
             if len(temp_split) > 1:
-                if self.info["userlevel"] >= 150:
+                if self.info["userlevel"] >= self.min_userlevel:
                     if temp_split[1]:
                         self.local_dispatch_map['']()
                     else:
@@ -49,11 +60,20 @@ class birthdays:
                     raise DCUserlevelIncorrectError
 
             else:
-                self.irc.send_whisper("Error: Usage '{help}'".format(
-                    help=default_commands.help_defaults[default_commands.dispatch_naming['birthdays']]['']
-                        .format(command=default_commands.dispatch_naming['birthdays'])
-                ), self.info["username"])
-                return
+                raise DCBirthdaysFormatError
+
+        except DCBirthdaysFormatError:
+            self.irc.send_whisper("Error: Usage '{help}'".format(
+                help=default_commands.help_defaults[default_commands.dispatch_naming['birthdays']]['']
+                    .format(command=default_commands.dispatch_naming['birthdays'])
+            ), self.info["username"])
+            return
+
+        except DCUserlevelIncorrectError:
+            self.irc.send_whisper("Error: You are not allowed to use {command}."
+                                  .format(command=default_commands.dispatch_naming['birthdays']),
+                                  self.info["username"])
+            return
 
     def addtodb(self):
         try:
@@ -69,6 +89,13 @@ class birthdays:
                     raise IndexError
 
                 if re.search(regexmatch, birthdate, flags=re.MULTILINE) is not None:
+                    split_birthdate = birthdate.split("/")
+                    if len(split_birthdate) == 3:
+                        currentdatetimelist = list(map(int, time.gmtime(time.time())))
+                        if time.mktime(datetime.datetime.strptime(birthdate, "%d/%m/%Y").timetuple()) > time.time():
+                            self.irc.send_whisper("Error: Submitted date is in the future.", self.info["username"])
+                            return
+
                     if sqlCursorOffload is None:
                         self.irc.send_whisper("Added birthdate '%s' successfully." % birthdate, self.info["username"])
 
@@ -127,12 +154,14 @@ class birthdays:
 
 
 def getbirthdayusers(sqlconn, configdefaults, currentdatetimelist):
-    if int(configdefaults.sqlSelectValueString("birthdays", "enabled").fetchone()[0]):
+    if boolean(configdefaults.sqlExecute("SELECT value FROM config WHERE grouping=? AND variable=?",
+                                         ("birthdays", "enabled")).fetchone()[0]):
+
         sqlConnectionChannel, sqlCursorChannel = sqlconn
         birthdayusers = {}
         sqlCursorChannel.execute("SELECT * FROM birthdays WHERE date LIKE ?",
-                                 ('{}%'.format("%s/%s" % (currentdatetimelist[2],
-                                                          currentdatetimelist[1])),))
+                                 ('{}%'.format("%02d/%02d" % (currentdatetimelist[2],
+                                                               currentdatetimelist[1])),))
         sqlCursorOffload = sqlCursorChannel.fetchall()
 
         if sqlCursorOffload:
@@ -164,7 +193,8 @@ def getbirthdayusers(sqlconn, configdefaults, currentdatetimelist):
 
 def joinevent(irc, configdefaults, birthdayusers, username):
     if username in list(birthdayusers.keys()) and \
-            bool(configdefaults.sqlSelectValueString("birthdays", "enabled").fetchone()[0]):
+            boolean(configdefaults.sqlExecute("SELECT value FROM config WHERE grouping=? AND variable=?",
+                                              ("birthdays", "enabled")).fetchone()[0]):
         irc.send_privmsg("Birthday Boy/Girl %s has joined the chat!"
                          " Wish them a happy %s birthday!"
                          % (birthdayusers[username][0],

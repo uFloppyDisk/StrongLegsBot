@@ -21,14 +21,13 @@ import sys
 import time
 
 import StrongLegsBot
-import default_commands
 import unpackconfig
 
 bot = StrongLegsBot.Bot()
 cfg = unpackconfig.configUnpacker()
 
 
-class diagnostic:
+class Diagnostic:
     def __init__(self, irc, sqlconn):
         self.mainbotfile = "StrongLegsBot.py"
         self.osplatform = sys.platform
@@ -53,7 +52,7 @@ class diagnostic:
             StrongLegsBot.Bot.mainloopbreak = True
 
 
-class parse:
+class Parse:
     def __init__(self, irc, sqlconn, data):
         self.config = cfg.unpackcfg()
         self.irc = irc
@@ -549,7 +548,7 @@ class parse:
             logging.error(e)
 
 
-class data:
+class Data:
     def __init__(self, irc, sqlconn):
         self.irc = irc
         self.channel = irc.CHANNEL
@@ -643,91 +642,3 @@ class data:
 
         except Exception as e:
             logging.exception(e)
-
-    def handleCommands(self, info, message=False, whisperaccess=False):
-        # Deal with variables/sql
-        if message is False:
-            message = info["privmsg"]
-        else:
-            message = message
-
-        if whisperaccess and message is not False:
-            info["privmsg"] = message
-
-        userlevel = info["userlevel"]
-        info["help"] = list(info.keys())
-        split_message = message.split(" ")
-        info["arg1"] = "nil" if (len(split_message) - 1) < 1 else split_message[1]
-        info["arg2"] = "nil" if (len(split_message) - 1) < 2 else split_message[2]
-        info["arg3"] = "nil" if (len(split_message) - 1) < 3 else split_message[3]
-
-        if whisperaccess:
-            self.sqlCursorChannel.execute('SELECT userlevel FROM userLevel WHERE username == ?', (info['username'],))
-            temp_userlevel = self.sqlCursorChannel.fetchone()
-            if temp_userlevel is not None:
-                userlevel = temp_userlevel[0]
-            else:
-                userlevel = 0
-
-        temp_message_split = message.split(" ", 1)
-        if temp_message_split[0] in list(default_commands.dispatch_map.keys()):
-            default_commands.dispatch_map[temp_message_split[0]](self.irc, self.sqlconn, info,
-                                                                 userlevel=userlevel, whisper=whisperaccess)
-            return
-
-        self.sqlCursorChannel.execute('SELECT * FROM commands WHERE userlevel <= ?',
-                                      (userlevel,))
-        sqlCursorOffload = self.sqlCursorChannel.fetchall()
-
-        # For every command in DB
-        for command in sqlCursorOffload:
-            try:
-                # Checks if user is indeed requesting that command and is above or equal to the required userlevel
-                if split_message[0] == command[1] and userlevel >= command[0]:
-                    logging.debug("Command usage request acknowledged")
-                    # Check is amount of args given is equal to the required amount
-                    if (len(split_message) - 1) == command[3]:
-                        # Tidies command varible
-                        command_output = command[2]
-                        command_sendtype = command[4]
-                        me = False
-
-                        if command_output.startswith('/me') or command_output.startswith('.me'):
-                            me = True
-
-                        # Checks for 1, 2 or 3 args
-                        if command[3] == 1:
-                            command_output = str(command[2]).format(arg1=info['arg1'])
-                        elif command[3] == 2:
-                            command_output = str(command[2]).format(arg1=info['arg1'],
-                                                                    arg2=info['arg2'])
-                        elif command[3] == 3:
-                            command_output = str(command[2]).format(arg1=info['arg1'],
-                                                                    arg2=info['arg2'],
-                                                                    arg3=info['arg3'])
-
-                        if command_sendtype == 'whisper' or whisperaccess:
-                            self.irc.send_whisper(command_output.format(**info), info['username'])
-                            return
-                        else:
-                            self.irc.send_privmsg(command_output.format(**info), me)
-                            return
-
-                    # Checks if args are required and given are above or below required
-                    elif command[3] > 0 and ((len(split_message) - 1) < command[3] or
-                                             (len(split_message) - 1) > command[3]):
-                        if not whisperaccess:
-                            self.irc.send_privmsg(command[5])
-                        else:
-                            self.irc.send_whisper(command[5], info['username'])
-
-                    return
-
-            except KeyError as err_key:
-                if not whisperaccess:
-                    self.irc.send_privmsg(err_key)
-                else:
-                    self.irc.send_whisper(err_key, info["username"])
-                return
-
-        return

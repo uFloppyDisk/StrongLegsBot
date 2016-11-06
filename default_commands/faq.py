@@ -16,6 +16,7 @@ limitations under the License.
 
 import re
 
+from constants import ConfigDefaults, boolean
 import default_commands
 from default_commands._exceptions import *
 
@@ -31,12 +32,27 @@ class faq:
         self.message = info["privmsg"]
         self.userlevel = userlevel
         self.whisper = whisper
+        self.sqlVariableString = "SELECT value FROM config WHERE grouping=? AND variable=?"
+
+        self.configdefaults = ConfigDefaults(sqlconn)
+
+        self.enabled = boolean(self.configdefaults.sqlExecute(
+            "SELECT value FROM config WHERE grouping=? AND variable=?",
+            ("faq", "enabled")).fetchone()[0])
+
+        if not self.enabled:
+            return
+
+        self.min_userlevel = int(self.configdefaults.sqlExecute(
+            self.sqlVariableString, ("faq", "min_userlevel")).fetchone()[0])
+        self.min_userlevel_edit = int(self.configdefaults.sqlExecute(
+            self.sqlVariableString, ("faq", "min_userlevel_edit")).fetchone()[0])
 
         temp_split = self.message.split(' ')
         if len(temp_split) > 1:
             if temp_split[1] == 'help':
                 self.help()
-            elif userlevel >= 400:
+            elif userlevel >= self.min_userlevel_edit:
                 if temp_split[1] in list(self.local_dispatch_map.keys()):
                     self.local_dispatch_map[temp_split[1]]()
                 else:
