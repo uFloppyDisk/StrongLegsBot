@@ -16,7 +16,7 @@ limitations under the License.
 
 import re
 
-from constants import ConfigDefaults, boolean
+from ..constants import ConfigDefaults, boolean
 import default_commands
 from default_commands._exceptions import *
 

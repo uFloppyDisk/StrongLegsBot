@@ -16,7 +16,7 @@ limitations under the License.
 
 import logging
 
-from constants import ConfigDefaults
+from ..constants import ConfigDefaults
 import default_commands
 from default_commands._exceptions import *
 
