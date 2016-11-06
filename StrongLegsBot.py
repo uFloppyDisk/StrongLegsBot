@@ -21,8 +21,8 @@ import socket
 import sqlite3 as sql
 import sys
 
-from constants import ConfigDefaults
 import default_commands
+from default_commands.constants import ConfigDefaults
 import _functions
 import _reloadbot
 import unpackconfig
