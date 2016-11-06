@@ -19,7 +19,7 @@ import logging
 import re
 import time
 
-from ..constants import ConfigDefaults, boolean
+from .constants import ConfigDefaults, boolean
 import default_commands
 from default_commands._exceptions import *
 

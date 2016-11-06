@@ -16,7 +16,7 @@ limitations under the License.
 
 import logging
 
-from ..constants import ConfigDefaults, boolean
+from .constants import ConfigDefaults, boolean
 import default_commands
 
 
