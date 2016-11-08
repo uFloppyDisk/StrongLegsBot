@@ -34,10 +34,10 @@ class config:
 
         self.configdefaults = ConfigDefaults(sqlconn)
 
-        self.sqlCursorChannel.execute("SELECT grouping FROM config")
-
         self.min_userlevel_edit = int(self.configdefaults.sqlExecute(
             self.sqlVariableString, ("birthdays", "min_userlevel")).fetchone()[0])
+
+        self.sqlCursorChannel.execute("SELECT grouping FROM config")
 
         temp_sqloffload = self.sqlCursorChannel.fetchall()
         try:
