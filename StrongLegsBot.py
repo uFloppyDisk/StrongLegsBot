@@ -110,7 +110,7 @@ class IRC:
         try:
             custom = self.custom if self.custom else ''
             formatted_output = u".w {target} %s{output}\r\n"\
-                               .format(output=output, target=target) % custom
+                               .format(target=target, output=output) % custom
             self.send_raw(self.privmsg_str + formatted_output)
             logging.info("[WHISPER] :| [SENT] %s: %s" % (self.CHANNEL, formatted_output.strip("\r\n")))
 
