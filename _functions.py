@@ -559,7 +559,7 @@ class Data:
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS userLevel(userid INTEGER, userlevel INTEGER, username TEXT)')
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS commands(userlevel INTEGER, keyword TEXT, output TEXT, args INTEGER, sendtype TEXT, syntaxerr TEXT)')
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS regulars(userid INTEGER, username TEXT)')
-        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS faq(userlevel INTEGER, name TEXT, regexp TEXT, output TEXT, sendtype TEXT)')
+        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS faq(userlevel INTEGER, name TEXT, regex TEXT, output TEXT, sendtype TEXT)')
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS filters'
                                       '(filtertype TEXT, enabled TEXT, maxuserlevel INTEGER, first_timeout INTEGER, '
                                       'second_timeout INTEGER, third_timeout INTEGER, ban_after_third TEXT, message TEXT)')

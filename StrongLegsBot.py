@@ -175,12 +175,7 @@ class Bot:
             'CREATE TABLE IF NOT EXISTS config(grouping TEXT, variable TEXT, value TEXT, args TEXT, userlevel INTEGER)'
         )
         self.sqlCursorChannel.execute(
-            'CREATE TABLE IF NOT EXISTS faq(userlevel INTEGER, name TEXT, regexp TEXT, output TEXT, sendtype TEXT)'
-        )
-        self.sqlCursorChannel.execute(
-            'CREATE TABLE IF NOT EXISTS filters'
-            '(filtertype TEXT, enabled TEXT, maxuserlevel INTEGER, first_timeout INTEGER, '
-            'second_timeout INTEGER, third_timeout INTEGER, ban_after_third TEXT, message TEXT)'
+            'CREATE TABLE IF NOT EXISTS faq(userlevel INTEGER, name TEXT, regex TEXT, output TEXT, sendtype TEXT)'
         )
         self.sqlCursorChannel.execute(
             'CREATE TABLE IF NOT EXISTS regulars(userid INTEGER, username TEXT)'
