@@ -388,7 +388,7 @@ class Parse:
             elif identifier == "PING":
                 servermsg = data.split(identifier)
                 servermsg = {"split_1": servermsg[0], "pingstring": servermsg[1]}
-                return servermsg, "[%s] Ping requested with data '%s'" % (identifier, servermsg["split_2"].strip("\r"))
+                return servermsg, "[%s] Ping requested with data '%s'" % (identifier, servermsg["pingstring"].strip("\r"))
 
             elif identifier == "RECONNECT":
                 return self.data_to_parse, "RECN" + self.data_to_parse
