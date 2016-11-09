@@ -224,7 +224,7 @@ class Bot:
                     self.startmarkloop = time.time()
                     logging.debug("START MARK")
 
-                    if self.currentdatetimelist[5] - self.olddatetimelist[5]:
+                    if self.currentdatetimelist[2] - self.olddatetimelist[2]:
                         self.birthdayusers = default_commands.birthdays.getbirthdayusers(self.sqlconn,
                                                                                          self.configdefaults,
                                                                                          self.currentdatetimelist)
