@@ -158,7 +158,7 @@ def getbirthdayusers(sqlconn, configdefaults, currentdatetimelist):
         birthdayusers = {}
         sqlCursorChannel.execute("SELECT * FROM birthdays WHERE date LIKE ?",
                                  ('{}%'.format("%02d/%02d" % (currentdatetimelist[2],
-                                                               currentdatetimelist[1])),))
+                                                              currentdatetimelist[1])),))
         sqlCursorOffload = sqlCursorChannel.fetchall()
 
         if sqlCursorOffload:

@@ -73,7 +73,7 @@ class commands:
 
         sqlCursorOffload = self.sqlCursorChannel.fetchall()
 
-        if sqlCursorOffload == []:
+        if not sqlCursorOffload:
             self.irc.send_privmsg(': Error: Channel %s has no custom commands.' % self.irc.CHANNEL, True)
             return
 
@@ -90,7 +90,7 @@ class commands:
 
             command_dict[entry[0]].append(entry[1])
 
-        if sqlCursorOffload == []:
+        if not sqlCursorOffload:
             self.irc.send_whisper("Error: Channel '%s' has no commands available for use with your current userlevel "
                                   "(%s)" % (self.irc.CHANNEL, self.userlevel), self.info['username'])
             return

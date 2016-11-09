@@ -145,9 +145,9 @@ class Parse:
                              "user-type": servermsg.group(9), "username": servermsg.group(10),
                              "receiver": servermsg.group(11), "privmsg": servermsg.group(12)}
 
-                return self.parsetype, self.parsetype, servermsg, False,  "[RECV] %s_%s: %s" % (servermsg["id"],
-                                                                                                servermsg["username"],
-                                                                                                servermsg["privmsg"])
+                return self.parsetype, self.parsetype, servermsg, False, "[RECV] %s_%s: %s" % (servermsg["id"],
+                                                                                               servermsg["username"],
+                                                                                               servermsg["privmsg"])
 
             elif self.parsetype == 'privmsg':
                 #############################
@@ -223,7 +223,8 @@ class Parse:
 
             if identifier == "CAP * ACK":
                 servermsg = data.split(" :")
-                return servermsg, "[%s] %s" % (dictIdentifer[identifier], servermsg[1])
+                servermsg = {"split_1": servermsg[0], "split_2": servermsg[1]}
+                return servermsg, "[%s] %s" % (dictIdentifer[identifier], servermsg["split_2"])
 
             elif identifier == "CLEARCHAT":
                 #############################
@@ -260,10 +261,12 @@ class Parse:
                                                                                     servermsg["reason"])
 
                     if clearchat_chatter.group(2) is None:
-                        servermsg = {"reason": clearchat_chatter.group(1).replace("\s", " ")
-                                     if clearchat_chatter.group(1) != " " else "~None~",
-                                     "channel": clearchat_chatter.group(4),
-                                     "target_username": clearchat_chatter.group(5)}
+                        servermsg = {
+                            "reason": clearchat_chatter.group(1).replace("\s", " ") if clearchat_chatter.group(1) != " "
+                            else "~None~",
+                            "channel": clearchat_chatter.group(4),
+                            "target_username": clearchat_chatter.group(5)
+                        }
 
                         return servermsg, "[%s] %s: BAN:%s Reason:%s" % (dictIdentifer[identifier],
                                                                          servermsg["channel"],
@@ -384,7 +387,8 @@ class Parse:
 
             elif identifier == "PING":
                 servermsg = data.split(identifier)
-                return servermsg, "[%s] Ping requested with data '%s'" % (identifier, servermsg[1].strip("\r"))
+                servermsg = {"split_1": servermsg[0], "pingstring": servermsg[1]}
+                return servermsg, "[%s] Ping requested with data '%s'" % (identifier, servermsg["split_2"].strip("\r"))
 
             elif identifier == "RECONNECT":
                 return self.data_to_parse, "RECN" + self.data_to_parse
@@ -469,14 +473,14 @@ class Parse:
                                      "channel": servermsg.group(15), "message": servermsg.group(16)}
 
                         return servermsg, "[%s] %s: (%s) Userid: %s Username: %s consMonth: %s sysMsg: %s : %s" % \
-                            (dictIdentifer[identifier],
-                             servermsg["channel"],
-                             servermsg["msg-id"],
-                             servermsg["user-id"],
-                             servermsg["username"],
-                             servermsg["msg-param-months"],
-                             servermsg["system-msg"].replace("\s", " "),
-                             servermsg["message"])
+                                          (dictIdentifer[identifier],
+                                           servermsg["channel"],
+                                           servermsg["msg-id"],
+                                           servermsg["user-id"],
+                                           servermsg["username"],
+                                           servermsg["msg-param-months"],
+                                           servermsg["system-msg"].replace("\s", " "),
+                                           servermsg["message"])
                     else:
                         servermsg = re.search(self.config["regex_server_usernotice_nousermsg"], data)
                         servermsg = {"badges": servermsg.group(1), "color": servermsg.group(2),
@@ -536,13 +540,15 @@ class Parse:
 
             else:
                 servermsg = data.split(" :")
+                servermsg = {"split_1": servermsg[0], "split_2": servermsg[1]}
                 if identifier.strip().isdigit():
                     formatted_identifier = '_' + identifier.strip()
                 else:
                     logging.error("Unrecognized server message, parse failed.")
                     formatted_identifier = identifier.strip()
 
-                return servermsg, "[%s] %s :%s" % (formatted_identifier, self.config["settings_username"], servermsg[1])
+                return servermsg, "[%s] %s :%s" % (formatted_identifier, self.config["settings_username"],
+                                                   servermsg["split_2"])
 
         except Exception as e:
             logging.error(e)
@@ -556,13 +562,18 @@ class Data:
         self.sqlconn = sqlconn
         self.sqlConnectionChannel, self.sqlCursorChannel = self.sqlconn
 
-        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS userLevel(userid INTEGER, userlevel INTEGER, username TEXT)')
-        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS commands(userlevel INTEGER, keyword TEXT, output TEXT, args INTEGER, sendtype TEXT, syntaxerr TEXT)')
+        self.sqlCursorChannel.execute(
+            'CREATE TABLE IF NOT EXISTS userLevel(userid INTEGER, userlevel INTEGER, username TEXT)')
+        self.sqlCursorChannel.execute(
+            'CREATE TABLE IF NOT EXISTS commands(userlevel INTEGER, keyword TEXT, output TEXT, args INTEGER, '
+            'sendtype TEXT, syntaxerr TEXT)')
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS regulars(userid INTEGER, username TEXT)')
-        self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS faq(userlevel INTEGER, name TEXT, regex TEXT, output TEXT, sendtype TEXT)')
+        self.sqlCursorChannel.execute(
+            'CREATE TABLE IF NOT EXISTS faq(userlevel INTEGER, name TEXT, regex TEXT, output TEXT, sendtype TEXT)')
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS filters'
                                       '(filtertype TEXT, enabled TEXT, maxuserlevel INTEGER, first_timeout INTEGER, '
-                                      'second_timeout INTEGER, third_timeout INTEGER, ban_after_third TEXT, message TEXT)')
+                                      'second_timeout INTEGER, third_timeout INTEGER, ban_after_third TEXT,'
+                                      ' message TEXT)')
         self.sqlCursorChannel.execute('CREATE TABLE IF NOT EXISTS offenses'
                                       '(userid INTEGER, username TEXT, offenses INTEGER)')
 
@@ -607,8 +618,9 @@ class Data:
 
                 if not sqlCursorOffload:
                     logging.debug("Adding user to userLevel for channel %s", self.channel)
-                    self.sqlCursorChannel.execute('INSERT INTO userLevel (userid, userlevel, username) VALUES (?, ?, ?)',
-                                                  (userid, userlevel, username))
+                    self.sqlCursorChannel.execute(
+                        'INSERT INTO userLevel (userid, userlevel, username) VALUES (?, ?, ?)',
+                        (userid, userlevel, username))
 
                 elif userlevel != sqlCursorOffload[0]:
                     logging.debug("Userlevel mismatch in %s", self.channel)

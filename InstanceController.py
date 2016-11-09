@@ -45,15 +45,14 @@ def deleteInstance(channel, processes):
 
 channels_file = open("channels.txt", "r")
 for channel in channels_file.readlines():
-    time.sleep(2)
+    time.sleep(1)
     addInstance(channel.strip("\n"), processes)
 
 user_input = None
 
 while user_input != "end":
-    user_input = eval(input("Channel: "))
-
-    if user_input in list(dictChannelKeys.keys()):
-        deleteInstance(user_input, processes)
-    else:
-        addInstance(user_input, processes)
+    try:
+        user_input = input("End?")
+    except Exception as e:
+        print(str(e))
+        break

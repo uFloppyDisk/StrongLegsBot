@@ -169,7 +169,8 @@ class Bot:
             'CREATE TABLE IF NOT EXISTS birthdays(userid TEXT, username TEXT, displayname TEXT, date TEXT)'
         )
         self.sqlCursorChannel.execute(
-            'CREATE TABLE IF NOT EXISTS commands(userlevel INTEGER, keyword TEXT, output TEXT, args INTEGER, sendtype TEXT, syntaxerr TEXT)'
+            'CREATE TABLE IF NOT EXISTS commands(userlevel INTEGER, keyword TEXT, output TEXT, args INTEGER, '
+            'sendtype TEXT, syntaxerr TEXT)'
         )
         self.sqlCursorChannel.execute(
             'CREATE TABLE IF NOT EXISTS config(grouping TEXT, variable TEXT, value TEXT, args TEXT, userlevel INTEGER)'
@@ -223,11 +224,10 @@ class Bot:
                     self.startmarkloop = time.time()
                     logging.debug("START MARK")
 
-                    if self.currentdatetimelist[2] - self.olddatetimelist[2]:
+                    if self.currentdatetimelist[5] - self.olddatetimelist[5]:
                         self.birthdayusers = default_commands.birthdays.getbirthdayusers(self.sqlconn,
                                                                                          self.configdefaults,
                                                                                          self.currentdatetimelist)
-                        return
 
                 else:
                     continue
@@ -242,7 +242,7 @@ class Bot:
                     if display:
                         logging.info("[%s] :| %s", parsetype.upper(), parsed)
 
-                    if "username" in info and info["username"] in self.ignoredusers:
+                    if "username" in list(info.keys()) and info["username"] in self.ignoredusers:
                         continue
 
                     if identifier == "366":
@@ -251,7 +251,7 @@ class Bot:
                     # Find and deal with periodic ping request (approx. every 5 minutes,
                     # socket disconnect after 11 minutes)
                     if identifier == "PING":
-                        pingstring = info[1]
+                        pingstring = info["pingstring"]
                         pingstring = pingstring.replace(":", "").strip("\r")
                         irc.send_raw("PONG%s\r\n" % pingstring)
 
@@ -397,4 +397,5 @@ if __name__ == '__main__':
     _funcdata = _functions.Data(irc, bot.sqlconn)
 
     bot.main()
-    sys.exit("Bot running in channel %s stopped." % irc.CHANNEL)
+    logging.critical("Bot running in channel %s stopped." % irc.CHANNEL)
+    sys.exit()

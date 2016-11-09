@@ -75,19 +75,21 @@ class config:
                 try:
                     if args[0] == "string":
                         return True, args
-                    elif args[0] == "integer" and (datatypes[args[0]][0](value) or datatypes[args[0]][1](value)):
+                    elif args[0] == "integer" and (datatypes[args[0]][0](value) or
+                                                   datatypes[args[0]][1](value) or
+                                                   value == "0"):
                         return True, args
                     elif args[0] == "boolean" and value in datatypes[args[0]]:
                         return True, args
                     else:
-                        raise TypeError
+                        raise TypeError("Datatype test failed.")
 
-                except TypeError:
-                    logging.info("TypeError")
+                except TypeError as te:
+                    logging.error("TypeError: %s" % str(te))
                     return False, args, TypeError
 
             else:
-                logging.info("Other")
+                logging.error("Error: Specified datatype not found.")
                 return False, args, Exception
 
         except Exception as e:
