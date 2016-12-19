@@ -470,7 +470,7 @@ def customCommands(irc, sqlconn, info, message=False, whisper=False):
     temp_message_split = message.split(" ", 1)
     if temp_message_split[0] in list(default_commands.dispatch_map.keys()):
         default_commands.dispatch_map[temp_message_split[0]](irc, sqlconn, info,
-                                                             userlevel=userlevel, whisper=whisper).chataccess()
+                                                             userlevel=userlevel, whisper=whisper).chat_access()
         return
 
     sqlCursorChannel.execute('SELECT * FROM commands WHERE userlevel <= ?',
