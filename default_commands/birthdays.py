@@ -26,9 +26,10 @@ from default_commands._exceptions import *
 
 class birthdays:
     def __init__(self, irc, sqlconn, info, userlevel=0, whisper=False):
-        self.local_dispatch_map = {'': self.addtodb}
+        self.local_dispatch_map = {'addtodb': self.addtodb, 'refresh': self.refresh}
 
         self.irc = irc
+        self.sqlconn = sqlconn
         self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
         self.info = info
         self.userlevel = userlevel
@@ -47,13 +48,20 @@ class birthdays:
 
         self.min_userlevel = int(self.configdefaults.sqlExecute(
             self.sqlVariableString, ("birthdays", "min_userlevel")).fetchone()[0])
+        self.min_userlevel_edit = int(self.configdefaults.sqlExecute(
+            self.sqlVariableString, ("birthdays", "min_userlevel_edit")).fetchone()[0])
 
+    def chat_access(self):
         try:
             temp_split = self.message.split(" ")
             if len(temp_split) > 1:
+                if self.info["userlevel"] >= self.min_userlevel_edit:
+                    if temp_split[1] in list(self.local_dispatch_map.keys()) and temp_split[1] != "addtodb":
+                        self.local_dispatch_map[temp_split[1]]()
+
                 if self.info["userlevel"] >= self.min_userlevel:
                     if temp_split[1]:
-                        self.local_dispatch_map['']()
+                        self.local_dispatch_map['addtodb']()
                     else:
                         raise DCBirthdaysFormatError
                 else:
@@ -149,6 +157,12 @@ class birthdays:
             self.irc.send_whisper(("%s Add Birthday Error: %s" % (self.irc.CHANNEL, str(e))), "thekillar25")
             return
 
+    def refresh(self):
+        currentdatetime = time.gmtime(time.time())
+        currentdatetimelist = [int(currentdatetime[index]) for index in range(0, 6)]
+        birthdayusers = getbirthdayusers(self.sqlconn, self.configdefaults, currentdatetimelist)
+        return birthdayusers
+
 
 def getbirthdayusers(sqlconn, configdefaults, currentdatetimelist):
     if boolean(configdefaults.sqlExecute("SELECT value FROM config WHERE grouping=? AND variable=?",
@@ -180,8 +194,6 @@ def getbirthdayusers(sqlconn, configdefaults, currentdatetimelist):
 
         else:
             pass
-
-        logging.info("[_BOTCOM] :| [CVAR] Birthday users: %s" % list(birthdayusers.keys()))
 
         return birthdayusers
 

@@ -15,6 +15,7 @@ limitations under the License.
 """
 
 import logging
+import logging.handlers
 import os
 import time
 import socket
@@ -43,10 +44,12 @@ class IRC:
 
         self.privmsg_str = u"PRIVMSG {channel} :".format(channel=self.CHANNEL)
         self.custom = False
+        self.silence = False
 
         if os.path.isfile('debug.txt'):
             fileread = open('debug.txt', 'r')
             self.custom = fileread.readline().strip("\n")
+            self.silence = fileread.readline().strip("\n")
 
     def init(self):
         try:
@@ -59,7 +62,7 @@ class IRC:
             self.send_raw('NICK %s\r\n' % self.USERNAME)
             self.send_raw('JOIN %s\r\n' % self.CHANNEL)
         except Exception as ERR_exception:
-            logging.critical(ERR_exception)
+            log.critical(ERR_exception)
 
     # Send raw message to Twitch
     def send_raw(self, output):
@@ -70,53 +73,57 @@ class IRC:
                               "thekillar25")
 
     def send_privmsg(self, output, me=False):
-        try:
-            me = '/me : ' if me else ''
-            custom = self.custom if self.custom else ''
-            formatted_output = u"%s%s{output}\r\n"\
-                               .format(output=output) % (me, custom)
+        if not self.silence:
+            try:
+                me = '/me : ' if me else ''
+                custom = self.custom if self.custom else ''
+                formatted_output = u"%s%s{output}\r\n"\
+                                   .format(output=output) % (me, custom)
 
-            self.send_raw(self.privmsg_str + formatted_output)
-            logging.info("[PRIVMSG] :| [SENT] %s: %s", self.CHANNEL, formatted_output.strip("\r\n"))
+                self.send_raw(self.privmsg_str + formatted_output)
+                log.info("[PRIVMSG] :| [SENT] %s: %s", self.CHANNEL, formatted_output.strip("\r\n"))
 
-        except UnicodeEncodeError as UnicodeErr:
-            self.send_whisper(":: ".join(["Unicode Error in send_privmsg", str(UnicodeErr)]),
-                              "thekillar25")
+            except UnicodeEncodeError as UnicodeErr:
+                self.send_whisper(":: ".join(["Unicode Error in send_privmsg", str(UnicodeErr)]),
+                                  "thekillar25")
 
     def send_timeout(self, output, target, duration):
-        try:
-            custom = self.custom if self.custom else ''
-            self.send_raw(self.privmsg_str + u'.timeout {target} {duration} %s{reason}\r\n'
-                          .format(target=target,
-                                  duration=duration,
-                                  reason=output)) % custom
+        if not self.silence:
+            try:
+                custom = self.custom if self.custom else ''
+                self.send_raw(self.privmsg_str + u'.timeout {target} {duration} %s{reason}\r\n'
+                              .format(target=target,
+                                      duration=duration,
+                                      reason=output)) % custom
 
-        except UnicodeEncodeError as UnicodeErr:
-            self.send_whisper(":: ".join(["Unicode Error in send_timeout", str(UnicodeErr)]),
-                              "thekillar25")
+            except UnicodeEncodeError as UnicodeErr:
+                self.send_whisper(":: ".join(["Unicode Error in send_timeout", str(UnicodeErr)]),
+                                  "thekillar25")
 
     def send_ban(self, output, target):
-        try:
-            custom = self.custom if self.custom else ''
-            self.send_raw(self.privmsg_str + u'.ban {target} %s{reason}\r\n'
-                          .format(target=target,
-                                  reason=output)) % custom
+        if not self.silence:
+            try:
+                custom = self.custom if self.custom else ''
+                self.send_raw(self.privmsg_str + u'.ban {target} %s{reason}\r\n'
+                              .format(target=target,
+                                      reason=output)) % custom
 
-        except UnicodeEncodeError as UnicodeErr:
-            self.send_whisper(":: ".join(["Unicode Error in send_ban", str(UnicodeErr)]),
-                              "thekillar25")
+            except UnicodeEncodeError as UnicodeErr:
+                self.send_whisper(":: ".join(["Unicode Error in send_ban", str(UnicodeErr)]),
+                                  "thekillar25")
 
     def send_whisper(self, output, target):
-        try:
-            custom = self.custom if self.custom else ''
-            formatted_output = u".w {target} %s{output}\r\n"\
-                               .format(target=target, output=output) % custom
-            self.send_raw(self.privmsg_str + formatted_output)
-            logging.info("[WHISPER] :| [SENT] %s: %s" % (self.CHANNEL, formatted_output.strip("\r\n")))
+        if not self.silence:
+            try:
+                custom = self.custom if self.custom else ''
+                formatted_output = u".w {target} %s{output}\r\n"\
+                                   .format(target=target, output=output) % custom
+                self.send_raw(self.privmsg_str + formatted_output)
+                log.info("[WHISPER] :| [SENT] %s: %s" % (self.CHANNEL, formatted_output.strip("\r\n")))
 
-        except UnicodeEncodeError as UnicodeErr:
-            self.send_whisper(u":: ".join(["Unicode Error in send_whisper", str(UnicodeErr)]),
-                              "thekillar25")
+            except UnicodeEncodeError as UnicodeErr:
+                self.send_whisper(u":: ".join(["Unicode Error in send_whisper", str(UnicodeErr)]),
+                                  "thekillar25")
 
 
 # Class housing main loop for SLB
@@ -134,6 +141,11 @@ class Bot:
         self.endmarkloop = 0
         self.previous_line = None
         self.mainloopbreak = False
+
+        self.logFile = None
+        self.logFileFormat = None
+        self.logDate = None
+        self.chatLogFile = None
 
         self.sqlConnectionChannel = None
         self.sqlCursorChannel = None
@@ -153,6 +165,21 @@ class Bot:
         self.ignoredusersfile = open('ignoredusers.txt', 'r')
         self.ignoredusersread = self.ignoredusersfile.readlines()
         self.ignoredusers = [username.strip('\n').strip('\r') for username in self.ignoredusersread]
+
+        if not os.path.exists("/".join([os.getcwd(), "logs", irc.CHANNEL, "chat"])):
+            os.makedirs("/".join([os.getcwd(), "logs", irc.CHANNEL, "chat"]))
+
+        if not os.path.exists("/".join([os.getcwd(), "logs", irc.CHANNEL, "raw"])):
+            os.makedirs("/".join([os.getcwd(), "logs", irc.CHANNEL, "raw"]))
+
+        self.logFileFormat = logging.Formatter("<%(asctime)s> %(message)s")
+        self.logFile = logging.FileHandler(encoding="utf-8", filename="/".join([os.getcwd(), "logs",
+                                                                               irc.CHANNEL, "raw",
+                                                                               "{}_rawlog.log".format(
+                                                                                   time.strftime("%Y-%m-%d"))]))
+        self.logFile.setFormatter(self.logFileFormat)
+        self.logFile.setLevel(logging.INFO)
+        log.addHandler(self.logFile)
 
         if sys.platform == "linux2":
             self.sqlConnectionChannel = sql.connect('SLB.sqlDatabase/{}DB.db'
@@ -214,6 +241,11 @@ class Bot:
                 if len(self.data) == 0:
                     _funcdiagnose.bot_restart("Lost connection with Twitch IRC server", user_loggingchoice)
 
+                self.logDate = time.strftime("%Y-%m-%d")
+                self.chatLogFile = open('logs/{channel}/chat/{logDate}_log.log'
+                                        .format(channel=irc.CHANNEL, logDate=self.logDate),
+                                        'a+', encoding="utf-8")
+
                 # Captures current time for response time measuring
                 if self.temp:
                     self.olddatetime = self.currentdatetime
@@ -222,31 +254,46 @@ class Bot:
                     self.currentdatetimelist = list(map(int, self.currentdatetime))
 
                     self.startmarkloop = time.time()
-                    logging.debug("START MARK")
+                    log.debug("START MARK")
 
                     if self.currentdatetimelist[2] - self.olddatetimelist[2]:
+                        log.removeHandler(self.logFile)
+                        self.logFile = logging.FileHandler(filename="/".join([os.getcwd(), "logs",
+                                                                              irc.CHANNEL, "raw",
+                                                                              "{}_rawlog.log".format(
+                                                                                  time.strftime("%Y-%m-%d"))]))
+                        log.addHandler(self.logFile)
+
                         self.birthdayusers = default_commands.birthdays.getbirthdayusers(self.sqlconn,
                                                                                          self.configdefaults,
                                                                                          self.currentdatetimelist)
+                        log.info("[_BOTCOM] :| [CVAR] Birthday users: %s" % list(self.birthdayusers.keys()))
 
                 else:
                     continue
 
                 # Loop for dealing with each item separately
                 for line in self.temp:
-                    logging.debug(repr(line))
+                    log.debug(repr(line))
 
                     # Parse and extract data from line and display formatted string
                     parsetype, identifier, info, display, parsed = _functions.Parse(irc, self.sqlconn, line).parse()
 
                     if display:
-                        logging.info("[%s] :| %s", parsetype.upper(), parsed)
+                        log.info("[%s] :| %s", parsetype.upper(), parsed)
 
                     if "username" in list(info.keys()) and info["username"] in self.ignoredusers:
+                        if identifier == "privmsg":
+                            temp_log_output = "<%02d:%02d:%02d> {---} [%s]: %s\n" % (
+                                self.currentdatetimelist[3], self.currentdatetimelist[4],
+                                self.currentdatetimelist[5], info["username"], info["privmsg"])
+
+                            self.chatLogFile.write(temp_log_output)
+
                         continue
 
                     if identifier == "366":
-                        logging.info("[_BOTCOM] :| [JOIN] Joined %s Successfully..." % irc.CHANNEL)
+                        log.info("[_BOTCOM] :| [JOIN] Joined %s Successfully..." % irc.CHANNEL)
 
                     # Find and deal with periodic ping request (approx. every 5 minutes,
                     # socket disconnect after 11 minutes)
@@ -282,6 +329,13 @@ class Bot:
                         userlevel = _funcdata.handleUserLevel(handleuserlevel)
                         info["userlevel"] = userlevel
 
+                        temp_log_output = "<%02d:%02d:%02d> {%s} [%s]: %s\n" % (
+                            self.currentdatetimelist[3], self.currentdatetimelist[4],
+                            self.currentdatetimelist[5], info["userlevel"],
+                            info["username"], info["privmsg"])
+
+                        self.chatLogFile.write(temp_log_output)
+
                         # Passes user through filters if permission level is under 250
                         # if userlevel < 250:
                         #     if filters.filters(irc, self.sqlconn, info).linkprotection():
@@ -297,7 +351,7 @@ class Bot:
                     # Find and deal with whispers
                     if identifier == "whisper":
                         if irc.CHANNEL in info['privmsg']:
-                            logging.info("[%s] :| %s", parsetype.upper(), parsed)
+                            log.info("[%s] :| %s", parsetype.upper(), parsed)
 
                         handleuserlevel = (info["user-id"], info["username"], info["user-type"],
                                            0, info["turbo"])
@@ -307,11 +361,11 @@ class Bot:
                         temp_split_message = info["privmsg"].split(" ")
                         if info["username"] == 'thekillar25':
                             if temp_split_message[0] == '!reload':
-                                logging.warning("IMPORTANT: Reloading app resources")
+                                log.warning("IMPORTANT: Reloading app resources")
                                 try:
                                     _reloadbot.reloadall()
                                 except Exception as e:
-                                    logging.error(e)
+                                    log.error(e)
 
                             if temp_split_message[0] == '$forcerestart':
                                 if len(temp_split_message) == 2:
@@ -329,7 +383,7 @@ class Bot:
                             if temp_split_message[0] == '$stop':
                                 if len(temp_split_message) == 2:
                                     if temp_split_message[1] in ('all', irc.CHANNEL):
-                                        raise KeyboardInterrupt
+                                        self.mainloopbreak = True
 
                                 elif len(temp_split_message) > 2:
                                     if temp_split_message[1] in ('all', irc.CHANNEL):
@@ -338,7 +392,7 @@ class Bot:
                                         else:
                                             irc.send_privmsg(" ".join(temp_split_message[2:]))
 
-                                        raise KeyboardInterrupt
+                                        self.mainloopbreak = True
 
                             if temp_split_message[0] == '$send' and userlevel >= 400:
                                 if len(temp_split_message) <= 2:
@@ -358,11 +412,11 @@ class Bot:
 
                     if self.temp.index(line) == len(self.temp) - 1:
                         self.endmarkloop = time.time()
-                        logging.debug("END MARK: Dealt with data chunk in %s milliseconds." %
-                                      ((self.endmarkloop - self.startmarkloop) * 1000))
+                        log.debug("END MARK: Dealt with data chunk in %s milliseconds." %
+                                  ((self.endmarkloop - self.startmarkloop) * 1000))
 
             except KeyboardInterrupt:
-                logging.critical('Process Interrupted by KeyboardInterrupt')
+                log.critical('Process Interrupted by KeyboardInterrupt')
                 self.mainloopbreak = True
 
 
@@ -383,8 +437,15 @@ if __name__ == '__main__':
         logging_level = logging_levels[user_loggingchoice]
 
     # Set logging formatting default
-    logging.basicConfig(format='<%(asctime)s> %(filename)s:%(levelname)s:%(lineno)s: %(message)s',
-                        level=logging_level)
+    logging.basicConfig(format='<%(asctime)s> %(filename)s:%(levelname)s:%(lineno)s: %(message)s')
+    log = logging.getLogger("StrongLegsBot")
+    log.setLevel(logging_level)
+
+    # logStreamFormat = logging.Formatter('<%(asctime)s> %(filename)s:%(levelname)s:%(lineno)s: %(message)s')
+    # logStream = logging.StreamHandler(stream=sys.stdout)
+    # logStream.setFormatter(logStreamFormat)
+    # logStream.setLevel(logging_level)
+    # log.addHandler(logStream)
 
     # Create instances of each class in StrongLegsBot and initialize IRC conn
     irc = IRC()
@@ -397,5 +458,5 @@ if __name__ == '__main__':
     _funcdata = _functions.Data(irc, bot.sqlconn)
 
     bot.main()
-    logging.critical("Bot running in channel %s stopped." % irc.CHANNEL)
+    log.critical("Bot running in channel %s stopped." % irc.CHANNEL)
     sys.exit()

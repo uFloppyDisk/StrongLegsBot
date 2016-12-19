@@ -48,14 +48,15 @@ class commands:
         self.min_userlevel_edit = int(self.configdefaults.sqlExecute(
             self.sqlVariableString, ("commands", "min_userlevel_edit")).fetchone()[0])
 
+    def chat_access(self):
         temp_split = self.message.split(' ')
-        if userlevel >= self.min_userlevel:
+        if self.userlevel >= self.min_userlevel:
             if len(temp_split) > 1:
                 if temp_split[1] == 'help':
                     self.help()
                 elif temp_split[1] == 'page':
                     pass
-                elif userlevel >= self.min_userlevel_edit:
+                elif self.userlevel >= self.min_userlevel_edit:
                     if temp_split[1] in list(self.local_dispatch_map.keys()):
                         self.local_dispatch_map[temp_split[1]]()
                     else:

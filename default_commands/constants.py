@@ -38,9 +38,11 @@ class ConfigDefaults:
 
         self.sqlInsertString = "INSERT INTO config (grouping, variable, value, args, userlevel) VALUES (?, ?, ?, ?, ?)"
         self.sqlUpdateString = "UPDATE config SET value=?, args=?, userlevel=? WHERE grouping=? AND variable=?"
+        self.sqlDeleteString = "DELETE FROM config WHERE grouping=? AND variable=?"
         self.sqlExecute = self.sqlCursorChannel.execute
 
     def all_(self, defaultto=0):
+        self.bot(defaultto)
         self.birthdays(defaultto)
         self.commands(defaultto)
         self.config(defaultto)
@@ -50,15 +52,33 @@ class ConfigDefaults:
         return
 
     def updatesql(self, grouping, variables, defaultto, variable):
-        self.sqlExecute("SELECT variable FROM config WHERE grouping = ?", (grouping,))
+        self.sqlExecute("SELECT grouping, variable FROM config WHERE grouping = ?", (grouping,))
         sqlCursorOffload = self.sqlCursorChannel.fetchall()
+
+        # Default-to Modes
+        #
+        # -1 - Delete
+        #  0 - Pass
+        #  1 - Append and Overwrite
+        #  2 - Append
+        #  3 - Overwrite
+
+        if defaultto == -1:
+            for entry in sqlCursorOffload:
+                if not [varset[1] == entry[1] for varset in variables]:
+                    self.sqlCursorChannel.execute(self.sqlDeleteString, (entry[0], entry[1]))
+                else:
+                    pass
+
+            self.sqlConnectionChannel.commit()
+            return
 
         if defaultto == 0:
             return
 
         if defaultto == 1:
             for varset in variables:
-                if True in [entry[0] == varset[1] for entry in sqlCursorOffload]:
+                if True in [entry[1] == varset[1] for entry in sqlCursorOffload]:
                     self.sqlCursorChannel.execute(self.sqlUpdateString, (varset[2], varset[3], varset[4],
                                                                          varset[0], varset[1]))
                 else:
@@ -69,7 +89,7 @@ class ConfigDefaults:
 
         if defaultto == 2:
             for varset in variables:
-                if True in [entry[0] == varset[1] for entry in sqlCursorOffload]:
+                if True in [entry[1] == varset[1] for entry in sqlCursorOffload]:
                     pass
                 else:
                     self.sqlCursorChannel.execute(self.sqlInsertString, varset)
@@ -79,7 +99,7 @@ class ConfigDefaults:
 
         if defaultto == 3:
             for varset in variables:
-                if True in [entry[0] == variable for entry in sqlCursorOffload] and varset[1] == variable:
+                if True in [entry[1] == variable for entry in sqlCursorOffload] and varset[1] == variable:
                     self.sqlCursorChannel.execute(self.sqlUpdateString, (varset[2], varset[3], varset[4],
                                                                          varset[0], varset[1]))
                 else:
@@ -88,11 +108,19 @@ class ConfigDefaults:
             self.sqlConnectionChannel.commit()
             return
 
+    def bot(self, defaultto, variable=None):
+        variables = [
+            ("bot", "silence", False, "boolean", 400),
+        ]
+
+        self.updatesql("bot", variables, defaultto, variable)
+
     def birthdays(self, defaultto, variable=None):
         variables = [
             ("birthdays", "enabled", True, "boolean", 400),
             ("birthdays", "keyword", "$birthdays", "string", 400),
             ("birthdays", "min_userlevel", 150, "integer,700-0", 400),
+            ("birthdays", "min_userlevel_edit", 400, "integer,700-0", 400),
         ]
 
         self.updatesql("birthdays", variables, defaultto, variable)

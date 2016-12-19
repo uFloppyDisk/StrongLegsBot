@@ -538,17 +538,22 @@ class Parse:
                                                      servermsg["channel"],
                                                      servermsg)
 
-            else:
+            elif identifier.strip().isdigit():
                 servermsg = data.split(" :")
                 servermsg = {"split_1": servermsg[0], "split_2": servermsg[1]}
-                if identifier.strip().isdigit():
-                    formatted_identifier = '_' + identifier.strip()
-                else:
-                    logging.error("Unrecognized server message, parse failed.")
-                    formatted_identifier = identifier.strip()
+                formatted_identifier = '_' + identifier.strip()
 
                 return servermsg, "[%s] %s :%s" % (formatted_identifier, self.config["settings_username"],
                                                    servermsg["split_2"])
+
+            else:
+                logging.error("Unrecognized server message, parse failed.")
+                servermsg = data.split(" :")
+                servermsg = {"split_1": servermsg[0], "split_2": servermsg[1]}
+                formatted_identifier = identifier.strip()
+
+                return servermsg, "[%s] %s; %s :%s" % ("UNID", formatted_identifier,
+                                                       self.irc.CHANNEL, servermsg["split_2"])
 
         except Exception as e:
             logging.error(e)

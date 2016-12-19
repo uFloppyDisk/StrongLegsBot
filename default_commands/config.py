@@ -39,11 +39,12 @@ class config:
 
         self.sqlCursorChannel.execute("SELECT grouping FROM config")
 
+    def chat_access(self):
         temp_sqloffload = self.sqlCursorChannel.fetchall()
         try:
             temp_split = self.message.split(' ')
             if len(temp_split) > 1:
-                if userlevel >= self.min_userlevel_edit:
+                if self.userlevel >= self.min_userlevel_edit:
                     if temp_split[1] in list(self.local_dispatch_map.keys()):
                         self.local_dispatch_map[temp_split[1]]()
                     elif (temp_split[1],) in list(temp_sqloffload):
