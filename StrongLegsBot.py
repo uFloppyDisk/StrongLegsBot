@@ -242,9 +242,14 @@ class Bot:
                     _funcdiagnose.bot_restart("Lost connection with Twitch IRC server", user_loggingchoice)
 
                 self.logDate = time.strftime("%Y-%m-%d")
-                self.chatLogFile = open('logs/{channel}/chat/{logDate}_log.log'
-                                        .format(channel=irc.CHANNEL, logDate=self.logDate),
-                                        'a+', encoding="utf-8")
+                if sys.platform == "linux2":
+                    self.chatLogFile = open('logs/{channel}/chat/{logDate}_log.log'
+                                            .format(channel=irc.CHANNEL, logDate=self.logDate),
+                                            'a+')
+                else:
+                    self.chatLogFile = open('logs/{channel}/chat/{logDate}_log.log'
+                                            .format(channel=irc.CHANNEL, logDate=self.logDate),
+                                            'a+', encoding="utf-8")
 
                 # Captures current time for response time measuring
                 if self.temp:
@@ -284,11 +289,14 @@ class Bot:
 
                     if "username" in list(info.keys()) and info["username"] in self.ignoredusers:
                         if identifier == "privmsg":
-                            temp_log_output = "<%02d:%02d:%02d> {---} [%s]: %s\n" % (
-                                self.currentdatetimelist[3], self.currentdatetimelist[4],
-                                self.currentdatetimelist[5], info["username"], info["privmsg"])
+                            try:
+                                temp_log_output = "<%02d:%02d:%02d> {---} [%s]: %s\n" % (
+                                    self.currentdatetimelist[3], self.currentdatetimelist[4],
+                                    self.currentdatetimelist[5], info["username"], info["privmsg"])
 
-                            self.chatLogFile.write(temp_log_output)
+                                self.chatLogFile.write(temp_log_output)
+                            except UnicodeEncodeError as e:
+                                log.exception(str(e))
 
                         continue
 
@@ -329,12 +337,15 @@ class Bot:
                         userlevel = _funcdata.handleUserLevel(handleuserlevel)
                         info["userlevel"] = userlevel
 
-                        temp_log_output = "<%02d:%02d:%02d> {%s} [%s]: %s\n" % (
-                            self.currentdatetimelist[3], self.currentdatetimelist[4],
-                            self.currentdatetimelist[5], info["userlevel"],
-                            info["username"], info["privmsg"])
+                        try:
+                            temp_log_output = "<%02d:%02d:%02d> {%s} [%s]: %s\n" % (
+                                self.currentdatetimelist[3], self.currentdatetimelist[4],
+                                self.currentdatetimelist[5], info["userlevel"],
+                                info["username"], info["privmsg"])
 
-                        self.chatLogFile.write(temp_log_output)
+                            self.chatLogFile.write(temp_log_output)
+                        except UnicodeEncodeError as e:
+                            log.exception(str(e))
 
                         # Passes user through filters if permission level is under 250
                         # if userlevel < 250:
