@@ -72,13 +72,13 @@ class config:
             }
 
             args = args.split(",")
+            value = str(value)
             if args[0] in list(datatypes.keys()):
                 try:
                     if args[0] == "string":
                         return True, args
                     elif args[0] == "integer" and (datatypes[args[0]][0](value) or
-                                                   datatypes[args[0]][1](value) or
-                                                   value == "0"):
+                                                   datatypes[args[0]][1](value)):
                         return True, args
                     elif args[0] == "boolean" and value in datatypes[args[0]]:
                         return True, args
