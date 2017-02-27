@@ -217,6 +217,11 @@ class ConfigDefaults:
         return
 
 
+class DefaultCommandNames:
+    def __init__(self, sqlconn):
+        self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
+
+
 def boolean(value):
     truevalues = ["True", "true", "1"]
     return value in truevalues

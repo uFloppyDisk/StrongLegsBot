@@ -22,8 +22,9 @@ from default_commands._exceptions import *
 
 
 class config:
-    def __init__(self, irc, sqlconn, info, userlevel=0, whisper=False):
+    def __init__(self, bot, irc, sqlconn, info, userlevel=0, whisper=False):
         self.local_dispatch_map = {"set": self.defaultedit, "reset": self.defaultreset}
+        self.bot = bot
         self.irc = irc
         self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
         self.info = info
@@ -35,7 +36,7 @@ class config:
         self.configdefaults = ConfigDefaults(sqlconn)
 
         self.min_userlevel_edit = int(self.configdefaults.sqlExecute(
-            self.sqlVariableString, ("birthdays", "min_userlevel")).fetchone()[0])
+            self.sqlVariableString, ("config", "min_userlevel_edit")).fetchone()[0])
 
         self.sqlCursorChannel.execute("SELECT grouping FROM config")
 
@@ -140,7 +141,7 @@ class config:
             return
 
         except Exception as e:
-            self.irc.send_whisper("%s Display Config Error: %s" % (self.irc.CHANNEL, str(e)), "thekillar25")
+            self.irc.send_whisper("%s Display Config Error: %s" % (self.irc.CHANNEL, str(e)), "floppydisk_")
             return
 
         else:
@@ -268,7 +269,7 @@ class config:
             return
 
         except Exception as e:
-            self.irc.send_whisper("%s Set Config Error: %s" % (self.irc.CHANNEL, str(e)), "thekillar25")
+            self.irc.send_whisper("%s Set Config Error: %s" % (self.irc.CHANNEL, str(e)), "floppydisk_")
             return
 
         else:

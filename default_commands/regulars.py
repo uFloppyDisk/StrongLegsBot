@@ -21,9 +21,10 @@ import default_commands
 
 
 class regulars:
-    def __init__(self, irc, sqlconn, info, userlevel=0, whisper=False):
+    def __init__(self, bot, irc, sqlconn, info, userlevel=0, whisper=False):
         self.local_dispatch_map = {'add': self.add, 'delete': self.delete, 'help': '',
                                    '': ''}
+        self.bot = bot
         self.irc = irc
         self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
         self.info = info
@@ -35,8 +36,11 @@ class regulars:
         self.configdefaults = ConfigDefaults(sqlconn)
 
         self.enabled = boolean(self.configdefaults.sqlExecute(
-            "SELECT value FROM config WHERE grouping=? AND variable=?",
-            ("regulars", "enabled")).fetchone()[0])
+            self.sqlVariableString, ("regulars", "enabled")).fetchone()[0])
+
+        self.commandkeyword = self.configdefaults.sqlExecute(
+            self.sqlVariableString, ("regulars", "keyword")).fetchone()[0]
+        default_commands.dispatch_naming["regulars"] = self.commandkeyword
 
         if not self.enabled:
             return

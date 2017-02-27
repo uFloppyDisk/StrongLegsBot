@@ -23,10 +23,11 @@ from default_commands._exceptions import *
 
 
 class commands:
-    def __init__(self, irc, sqlconn, info, userlevel=0, whisper=False):
+    def __init__(self, bot, irc, sqlconn, info, userlevel=0, whisper=False):
         self.local_dispatch_map = {'add': self.add, 'edit': self.edit,
-                                   'delete': self.delete, 'help': self.help,
-                                   '': self.disp_commands}
+                                   'delete': self.delete, "del": self.delete,
+                                   'help': self.help, '': self.disp_commands}
+        self.bot = bot
         self.irc = irc
         self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
         self.info = info
@@ -39,6 +40,10 @@ class commands:
 
         self.enabled = boolean(self.configdefaults.sqlExecute(
             self.sqlVariableString, ("commands", "enabled")).fetchone()[0])
+
+        self.commandkeyword = self.configdefaults.sqlExecute(
+            self.sqlVariableString, ("commands", "keyword")).fetchone()[0]
+        default_commands.dispatch_naming["commands"] = self.commandkeyword
 
         if not self.enabled:
             return
@@ -248,7 +253,7 @@ class commands:
             return
 
         except Exception as e:
-            self.irc.send_whisper("%s Add Command Error: %s" % (self.irc.CHANNEL, str(e)), "thekillar25")
+            self.irc.send_whisper("%s Add Command Error: %s" % (self.irc.CHANNEL, str(e)), "floppydisk_")
             return
 
     def edit(self):
@@ -400,7 +405,7 @@ class commands:
             return
 
         except Exception as e:
-            self.irc.send_whisper("%s Edit Command Error: %s" % (self.irc.CHANNEL, str(e)), "thekillar25")
+            self.irc.send_whisper("%s Edit Command Error: %s" % (self.irc.CHANNEL, str(e)), "floppydisk_")
             return
 
     def delete(self):
@@ -436,11 +441,11 @@ class commands:
             return
 
         except Exception as e:
-            self.irc.send_whisper("%s Delete Command Error: %s" % (self.irc.CHANNEL, str(e)), "thekillar25")
+            self.irc.send_whisper("%s Delete Command Error: %s" % (self.irc.CHANNEL, str(e)), "floppydisk_")
             return
 
 
-def customCommands(irc, sqlconn, info, message=False, whisper=False):
+def customCommands(bot, irc, sqlconn, info, message=False, whisper=False):
     # Deal with variables/sql
     sqlConnectionChannel, sqlCursorChannel = sqlconn
 
@@ -469,7 +474,7 @@ def customCommands(irc, sqlconn, info, message=False, whisper=False):
 
     temp_message_split = message.split(" ", 1)
     if temp_message_split[0] in list(default_commands.dispatch_map.keys()):
-        default_commands.dispatch_map[temp_message_split[0]](irc, sqlconn, info,
+        default_commands.dispatch_map[temp_message_split[0]](bot, irc, sqlconn, info,
                                                              userlevel=userlevel, whisper=whisper).chat_access()
         return
 

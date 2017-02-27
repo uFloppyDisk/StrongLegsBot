@@ -36,7 +36,7 @@ class IRC:
     def __init__(self):
         # Initializes all class variables
         self.config = cfg.unpackcfg()
-        self.CHANNEL = sys.argv[1] if len(sys.argv) > 1 else "#thekillar25"
+        self.CHANNEL = sys.argv[1] if len(sys.argv) > 1 else "#floppydisk_"
         self.USERNAME = self.config['settings_username']
         self.PASSWORD = self.config['settings_password']
         self.HOST = self.config['settings_host']
@@ -70,7 +70,7 @@ class IRC:
             sock.send(output.format(channel=self.CHANNEL).encode("UTF-8"))
         except UnicodeEncodeError as UnicodeErr:
             self.send_whisper(":: ".join(["Unicode Error in send_raw", str(UnicodeErr)]),
-                              "thekillar25")
+                              "floppydisk_")
 
     def send_privmsg(self, output, me=False):
         if not self.silence:
@@ -85,7 +85,7 @@ class IRC:
 
             except UnicodeEncodeError as UnicodeErr:
                 self.send_whisper(":: ".join(["Unicode Error in send_privmsg", str(UnicodeErr)]),
-                                  "thekillar25")
+                                  "floppydisk_")
 
     def send_timeout(self, output, target, duration):
         if not self.silence:
@@ -98,7 +98,7 @@ class IRC:
 
             except UnicodeEncodeError as UnicodeErr:
                 self.send_whisper(":: ".join(["Unicode Error in send_timeout", str(UnicodeErr)]),
-                                  "thekillar25")
+                                  "floppydisk_")
 
     def send_ban(self, output, target):
         if not self.silence:
@@ -110,7 +110,7 @@ class IRC:
 
             except UnicodeEncodeError as UnicodeErr:
                 self.send_whisper(":: ".join(["Unicode Error in send_ban", str(UnicodeErr)]),
-                                  "thekillar25")
+                                  "floppydisk_")
 
     def send_whisper(self, output, target):
         if not self.silence:
@@ -123,7 +123,7 @@ class IRC:
 
             except UnicodeEncodeError as UnicodeErr:
                 self.send_whisper(u":: ".join(["Unicode Error in send_whisper", str(UnicodeErr)]),
-                                  "thekillar25")
+                                  "floppydisk_")
 
 
 # Class housing main loop for SLB
@@ -215,6 +215,14 @@ class Bot:
 
         self.configdefaults = ConfigDefaults(self.sqlconn)
 
+        for command in default_commands.dispatch_naming.keys():
+            if command == "config":
+                continue
+            commandkeyword = self.sqlCursorChannel.execute(
+                "SELECT value FROM config WHERE grouping=? AND variable=?", (command, "keyword")
+            ).fetchone()[0]
+            default_commands.dispatch_naming[command] = commandkeyword
+
         self.olddatetimelist = [int(self.olddatetime[index]) for index in range(0, 6)]
         self.currentdatetimelist = [int(self.currentdatetime[index]) for index in range(0, 6)]
 
@@ -272,7 +280,7 @@ class Bot:
                         self.birthdayusers = default_commands.birthdays.getbirthdayusers(self.sqlconn,
                                                                                          self.configdefaults,
                                                                                          self.currentdatetimelist)
-                        log.info("[_BOTCOM] :| [CVAR] Birthday users: %s" % list(self.birthdayusers.keys()))
+                        log.info("[_BOTCOM] :| [CVAR] {channel}: Birthday users: %s".format(channel=irc.CHANNEL) % list(self.birthdayusers.keys()))
 
                 else:
                     continue
@@ -332,7 +340,7 @@ class Bot:
                         # 400 - Broadcaster
                         # 500 - Admin
                         # 600 - Staff
-                        # 700 - TheKillar25
+                        # 700 - FloppyDisk_
 
                         userlevel = _funcdata.handleUserLevel(handleuserlevel)
                         info["userlevel"] = userlevel
@@ -354,7 +362,7 @@ class Bot:
 
                         # -=-=-=-=-=-=-= Non-restricted users past this point =-=-=-=-=-=-=-
 
-                        default_commands.commands.customCommands(irc, self.sqlconn, info)
+                        default_commands.commands.customCommands(bot, irc, self.sqlconn, info)
 
                         if info["userlevel"] >= 700 and info["privmsg"].startswith("$forcerestart"):
                             _funcdiagnose.bot_restart("Forced restart by bot admin", user_loggingchoice)
@@ -370,7 +378,7 @@ class Bot:
                         info["userlevel"] = userlevel
 
                         temp_split_message = info["privmsg"].split(" ")
-                        if info["username"] == 'thekillar25':
+                        if info["username"] == 'floppydisk_':
                             if temp_split_message[0] == '!reload':
                                 log.warning("IMPORTANT: Reloading app resources")
                                 try:
@@ -418,7 +426,7 @@ class Bot:
                                             irc.send_privmsg(" ".join(temp_split_message[2:]))
 
                         if temp_split_message[0] == irc.CHANNEL:
-                            default_commands.commands.customCommands(irc, self.sqlconn, info,
+                            default_commands.commands.customCommands(bot, irc, self.sqlconn, info,
                                                                      " ".join(temp_split_message[1:]), True)
 
                     if self.temp.index(line) == len(self.temp) - 1:

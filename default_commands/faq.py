@@ -22,10 +22,11 @@ from default_commands._exceptions import *
 
 
 class faq:
-    def __init__(self, irc, sqlconn, info, userlevel=0, whisper=False):
+    def __init__(self, bot, irc, sqlconn, info, userlevel=0, whisper=False):
         self.local_dispatch_map = {'add': self.add, 'edit': self.edit,
                                    'delete': self.delete, 'help': self.help,
                                    '': ''}
+        self.bot = bot
         self.irc = irc
         self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
         self.info = info
@@ -37,8 +38,11 @@ class faq:
         self.configdefaults = ConfigDefaults(sqlconn)
 
         self.enabled = boolean(self.configdefaults.sqlExecute(
-            "SELECT value FROM config WHERE grouping=? AND variable=?",
-            ("faq", "enabled")).fetchone()[0])
+            self.sqlVariableString, ("faq", "enabled")).fetchone()[0])
+
+        self.commandkeyword = self.configdefaults.sqlExecute(
+            self.sqlVariableString, ("faq", "keyword")).fetchone()[0]
+        default_commands.dispatch_naming["faq"] = self.commandkeyword
 
         if not self.enabled:
             return

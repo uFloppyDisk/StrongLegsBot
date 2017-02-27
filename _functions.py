@@ -595,7 +595,7 @@ class Data:
                             'admin': 500, 'staff': 600}
 
             if not whisper:
-                if username == 'thekillar25':
+                if username == 'floppydisk_':
                     userlevel = 700
 
                 elif usertype == '':
@@ -638,7 +638,7 @@ class Data:
                 self.sqlConnectionChannel.commit()
 
             else:
-                if username == 'thekillar25':
+                if username == 'floppydisk_':
                     userlevel = 700
 
                 elif usertype == '':

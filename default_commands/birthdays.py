@@ -25,9 +25,10 @@ from default_commands._exceptions import *
 
 
 class birthdays:
-    def __init__(self, irc, sqlconn, info, userlevel=0, whisper=False):
-        self.local_dispatch_map = {'addtodb': self.addtodb, 'refresh': self.refresh}
-
+    def __init__(self, bot, irc, sqlconn, info, userlevel=0, whisper=False):
+        self.local_dispatch_map = {'addtodb': self.addtodb, 'refresh': self.refresh,
+                                   "list": self.users, "users": self.users}
+        self.bot = bot
         self.irc = irc
         self.sqlconn = sqlconn
         self.sqlConnectionChannel, self.sqlCursorChannel = sqlconn
@@ -42,6 +43,10 @@ class birthdays:
 
         self.enabled = boolean(self.configdefaults.sqlExecute(
             self.sqlVariableString, ("birthdays", "enabled")).fetchone()[0])
+
+        self.commandkeyword = self.configdefaults.sqlExecute(
+            self.sqlVariableString, ("birthdays", "keyword")).fetchone()[0]
+        default_commands.dispatch_naming["birthdays"] = self.commandkeyword
 
         if not self.enabled:
             return
@@ -58,6 +63,7 @@ class birthdays:
                 if self.info["userlevel"] >= self.min_userlevel_edit:
                     if temp_split[1] in list(self.local_dispatch_map.keys()) and temp_split[1] != "addtodb":
                         self.local_dispatch_map[temp_split[1]]()
+                        return
 
                 if self.info["userlevel"] >= self.min_userlevel:
                     if temp_split[1]:
@@ -125,7 +131,7 @@ class birthdays:
 
         except DCDatabaseEntryExists:
             self.irc.send_whisper('Error: Your birthdate already exists in the database: \'%s\''
-                                  ' If the existing birthdate is incorrect, please whisper TheKillar25.'
+                                  ' If the existing birthdate is incorrect, please whisper floppydisk_.'
                                   % sqlCursorOffload[1],
                                   self.info["username"])
             return
@@ -154,14 +160,30 @@ class birthdays:
             self.irc.send_whisper("Error: Unexpected error occurred.",
                                   self.info["username"])
 
-            self.irc.send_whisper(("%s Add Birthday Error: %s" % (self.irc.CHANNEL, str(e))), "thekillar25")
+            self.irc.send_whisper(("%s Add Birthday Error: %s" % (self.irc.CHANNEL, str(e))), "floppydisk_")
             return
 
     def refresh(self):
         currentdatetime = time.gmtime(time.time())
         currentdatetimelist = [int(currentdatetime[index]) for index in range(0, 6)]
         birthdayusers = getbirthdayusers(self.sqlconn, self.configdefaults, currentdatetimelist)
-        return birthdayusers
+        self.bot.birthdayusers = birthdayusers
+        temp_string = "Refreshed birthday user list for channel {channel}".format(channel=self.irc.CHANNEL)
+
+        if self.whisper:
+            self.irc.send_whisper(temp_string, self.info["username"])
+        else:
+            self.irc.send_privmsg(temp_string)
+        return
+
+    def users(self):
+        temp_string = "Users with birthdays today! (GMT): {list}".format(list=", ".join(self.bot.birthdayusers.keys()))
+
+        if self.whisper:
+            self.irc.send_whisper(temp_string, self.info["username"])
+        else:
+            self.irc.send_privmsg(temp_string)
+        return
 
 
 def getbirthdayusers(sqlconn, configdefaults, currentdatetimelist):
